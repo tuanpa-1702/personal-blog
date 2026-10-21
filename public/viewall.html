@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-name="Tất cả bài viết">Tất cả bài viết - AnonyHT</title>
+<!-- Site-level SEO/social tags - see the matching block in index.html for
+     what data-meta-content/data-brand-name do and why. A specific tag or
+     search filter (?tag=/?q=) does not get its own description/OG here:
+     the list itself is the same content regardless of filter, and
+     viewall.js reads the query client-side. -->
+<meta name="description" content="Toàn bộ bài viết trên TuanPA — ảnh đời thường và vài dòng suy nghĩ.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" data-meta-content="brand_name" data-fallback="TuanPA">
+<meta property="og:title" content="Tất cả bài viết - TuanPA">
+<meta property="og:description" content="Toàn bộ bài viết trên TuanPA — ảnh đời thường và vài dòng suy nghĩ.">
+<meta property="og:url" content="https://blog.tuanpa.tech/viewall.html">
+<link rel="canonical" href="https://blog.tuanpa.tech/viewall.html">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#f6f1e7" data-theme-color-dark="#1e1a16">
+<!-- Favicon do admin đặt (Bảng quản trị > Quản lí trang chủ). server/render-html.js
+     điền href từ bảng settings trước khi gửi; giá trị trống hoặc chưa đặt thì bỏ cả thẻ. -->
+<link rel="icon" data-setting-href="favicon">
+<!-- Theme switch. MUST stay here - blocking, in <head>, ahead of the
+     stylesheets - so <html class="dark"> is set before the first paint.
+     Deferring it (or folding it into api.js at the end of <body>) brings back
+     the white flash on every navigation. -->
+<script src="/js/theme.js"></script>
+
+<!-- Fonts. Both families are SELF-HOSTED in /css/fonts.css, which
+     scripts/fetch-fonts.py generates: Inter as the static faces
+     Google serves per unicode-range (latin / latin-ext / vietnamese - the
+     three a page of Vietnamese prose actually selects), Material Symbols as a
+     subset of just the icons in use. Same-origin is the point: the first paint
+     waits on no third party, the faces are discovered while this
+     render-blocking stylesheet parses, and the hashed filenames are what lets
+     server.js serve /fonts/ as immutable for a year.
+     The two font-display values differ because the families fail differently.
+     An icon is a LIGATURE - the markup contains the word "search" and the font
+     turns it into a glyph - so block hides nothing-yet instead of printing the
+     word while the subset arrives. Body text swaps, because its fallback stack
+     is already readable text at the right size.
+     The faces the first paint sets text in are preloaded between the
+     @generated markers below; fetch-fonts.py rewrites their hashed hrefs. -->
+<link href="/css/fonts.css" rel="stylesheet">
+<!-- @font-face alone does not start a download until the layout needs a glyph,
+     which on the icon font means icons stay invisible for an extra round-trip
+     (display:block draws nothing), so the faces the first screen needs are
+     preloaded: the icon subset, plus the body family's 400 in the two
+     unicode-ranges Vietnamese prose is actually set in - latin and vietnamese,
+     which is why two, and why not the 700: body text is the first paint,
+     headings at worst the one after. `crossorigin` is required even
+     same-origin - fonts are always fetched anonymously, and a preload that
+     does not match the mode is simply downloaded twice.
+     The hrefs are hashed and therefore GENERATED - `npm run fetch:fonts`
+     rewrites everything between the markers below. Do not edit them by hand. -->
+<!-- @generated:font-preload -->
+<link as="font" crossorigin href="/fonts/material-symbols-subset.c7d51076.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-latin.3100e775.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-vietnamese.5c66f9e0.woff2" rel="preload" type="font/woff2">
+<!-- /@generated:font-preload -->
+
+<!-- Editorial redesign (shared with index.html/post.html) - see css/editorial.css.
+     Newsreader is the headline display serif; preloaded here for the same
+     reason as the two Inter faces above. Not @generated - hand-
+     maintained, this file is not part of the shared fetch-fonts.py pipeline. -->
+<link as="font" crossorigin href="/fonts/newsreader-n-400-latin.62981321.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/newsreader-n-400-vietnamese.f0dcc979.woff2" rel="preload" type="font/woff2">
+
+<!-- Design tokens, then the utilities. tailwind.css is COMPILED (see
+     tailwind.config.js + `npm run build:css`), replacing
+     <script src="https://cdn.tailwindcss.com">, which was not a stylesheet at
+     all but a 451 KB compiler: it parsed the DOM and only then generated and
+     appended a <style>. Until that finished not one utility existed - including
+     `.hidden`, which common.css does not define - so every element the markup
+     had hidden was painted and the page was a bare stack of unstyled text.
+     That is the other half of the flash.
+     Load order is deliberate: the CDN appended its <style> at the END of
+     <head>, after common.css, so keeping tailwind.css last preserves exactly
+     the cascade the pages were built against. -->
+<link href="/css/common.css" rel="stylesheet">
+<link href="/css/tailwind.css" rel="stylesheet">
+<style>
+  /* ---------- Numbered pages ----------
+     Six posts a page, and a row of page numbers under the grid instead of the
+     old "Xem thêm" button. A load-more list never said how many posts there
+     were, and every click buried the older ones one screenful deeper - with
+     numbers the reader can see the size of the list and jump across it.
+     Mirrors `.media-pager-*` in css/media.css (the media library's pager),
+     which this page does not load; tokens only, so the dark theme is free.
+     `display` sits under :not(.hidden) because `.hidden` is a tailwind utility
+     (one class) and `#viewall-pager` is an id: a plain `display:flex` here would
+     outrank it and the row viewall.js just hid would stay on the page. The rest
+     of the properties are inert while it is hidden, so they stay in the rule. */
+  #viewall-pager:not(.hidden) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+  }
+  /* Dimmed, not hidden, while a page loads: hiding it would drop the row out of
+     the layout and jerk the scroll position the reader is standing on. */
+  #viewall-pager.is-loading {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .pager-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 0.5rem;
+    border: 1px solid rgb(var(--ed-divider));
+    border-radius: 3px;
+    font-size: 0.8125rem;
+    color: rgb(var(--ed-ink-soft));
+    cursor: pointer;
+    transition: border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+  }
+  .pager-btn .material-symbols-outlined {
+    font-size: 18px;
+  }
+  .pager-btn:hover:not(:disabled):not(.is-current) {
+    border-color: rgb(var(--ed-accent) / 0.55);
+    color: rgb(var(--ed-accent));
+  }
+  .pager-btn.is-current {
+    border-color: rgb(var(--ed-primary));
+    background-color: rgb(var(--ed-primary));
+    color: rgb(var(--ed-on-primary));
+    font-weight: 600;
+  }
+  .pager-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .pager-btn:focus-visible {
+    outline: 2px solid rgb(var(--ed-accent));
+    outline-offset: 1px;
+  }
+  /* Skipped pages between the window's ends - a marker, not a button. */
+  .pager-gap {
+    padding: 0 0.125rem;
+    font-size: 0.8125rem;
+    color: rgb(var(--ed-ink-faint));
+  }
+  /* Below lg the pointer is a finger: same 44px the rest of the page's pills
+     grow to (`.tap-target` in common.css). */
+  @media (max-width: 1023px) {
+    .pager-btn {
+      min-width: 2.75rem;
+      height: 2.75rem;
+    }
+  }
+
+  /* The search field grows once focused, so a long title or hashtag stays
+     readable while typing. Only from md up: below that it is already full
+     width. The width lives on the wrapper (not the input) so the magnifier
+     icon, positioned against it, keeps its place.
+     Both "Danh mục" and the search field used to negotiate for space here -
+     the tag row grew/scrolled/faded to make room for the field's focus
+     width. Now that "Danh mục" is a dropdown (compact, fixed-width, like
+     "Sắp xếp" beside it), there is nothing left for the field to negotiate
+     with: plain justify-between and this rule are the whole layout. */
+  @media (min-width: 768px) {
+    #search-wrap {
+      width: 18rem;
+      max-width: 100%;
+      transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      /* Animating width directly repaints the bordered box on every frame;
+         without its own compositing layer, Chromium can leave a faint
+         ghost of the wider box's edge behind once it shrinks back. */
+      will-change: width;
+    }
+    #search-wrap:focus-within {
+      width: 30rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #search-wrap { transition: none; }
+    .pager-btn { transition: none; }
+  }
+
+  /* A plain text button that opens a listbox below it - "Danh mục" and "Sắp
+     xếp" are the same control, generically named rather than after either
+     one. */
+  .ed-inline-dd-btn {
+    color: rgb(var(--ed-ink));
+    cursor: pointer;
+  }
+  .ed-inline-dd-btn:hover { color: rgb(var(--ed-accent)); }
+  .ed-inline-dd-menu {
+    position: absolute;
+    top: calc(100% + 0.375rem);
+    left: 0;
+    min-width: 9rem;
+    z-index: 30;
+  }
+  /* white-space:nowrap so the LONGEST option's full text width (not just its
+     longest word) feeds the menu's own shrink-to-fit sizing above - without
+     it the menu settled at exactly min-width and every longer label (e.g.
+     "Tin tức công nghệ (1)") wrapped to two lines inside that fixed box
+     instead of the box growing to fit it. */
+  /* .ed-dropdown-item (editorial.css) carries no size of its own - it is
+     shared with the nav avatar menu, which reads at the ambient body size on
+     purpose. This trigger button next to it is 12px (.text-label-md), so the
+     options opening under it inherited whatever body's own size happened to
+     be and looked oversized against the compact row that opens them. Sized
+     down here rather than on .ed-dropdown-item itself, which the avatar menu
+     still needs at full size. */
+  .ed-inline-dd-option { width: 100%; white-space: nowrap; font-size: 0.8125rem; }
+  /* Solid black/white for the picked row, like .ed-chip-all/the homepage's
+     "Tất cả bài viết" pill - every "this one is chosen" control on the site
+     reads as the same language. */
+  .ed-inline-dd-option.is-selected,
+  .ed-inline-dd-option.is-selected:hover {
+    background: rgb(var(--ed-primary));
+    color: rgb(var(--ed-on-primary));
+  }
+  /* --ed-primary flips to near-white in dark mode (the same pair a solid
+     button reads through), which is right for an actual button but reads as
+     a stray bright panel inside an otherwise dark dropdown list. Kept within
+     the dark surface ladder instead - one step up from the panel itself,
+     the same "picked row" language .ed-dropdown-item:hover already uses,
+     just a shade further so a genuinely selected row still outranks a
+     merely-hovered one. */
+  html.dark .ed-inline-dd-option.is-selected,
+  html.dark .ed-inline-dd-option.is-selected:hover {
+    background: rgb(var(--ed-surface-high));
+    color: rgb(var(--ed-ink));
+  }
+</style>
+
+<!-- Editorial redesign (shared with index.html/post.html) - see css/editorial.css.
+     Loaded LAST, after the page's own <style> block above: several rules there
+     (.pager-btn, .ed-inline-dd-option.is-selected, ...) were retinted in place with --ed-*
+     tokens rather than duplicated here, so no specificity race with this file
+     - but it still has to come after for anything it DOES override elsewhere
+     on the page at the same specificity. -->
+<link href="/css/editorial.css" rel="stylesheet">
+</head>
+<body class="editorial-page font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col">
+
+<!-- TopNavBar -->
+<nav class="ed-nav fixed top-0 w-full z-50">
+<div class="flex justify-between items-center h-16 px-sm md:px-margin-page w-full max-w-7xl mx-auto gap-6">
+<div class="flex items-center gap-6">
+<button class="ed-icon-btn ed-hamburger-btn flex items-center justify-center p-1.5" type="button" data-action="mobile-nav-toggle" aria-label="Mở menu điều hướng"><span class="material-symbols-outlined">menu</span></button>
+<a class="group inline-flex items-baseline gap-1.5" href="/index.html" id="nav-brand">
+<span class="ed-wordmark" data-brand-name>TuanPA</span>
+</a>
+<div class="ed-nav-links">
+<a class="ed-nav-link" href="/index.html">Trang chủ</a>
+<a class="ed-nav-link is-active" href="/viewall.html">Tất cả bài viết</a>
+<a class="ed-nav-link" href="/about.html">Về tác giả</a>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<a class="ed-icon-btn flex items-center justify-center p-2.5 sm:hidden" href="#filter-search" title="Tìm kiếm"><span class="material-symbols-outlined">search</span></a>
+<div class="ed-nav-divider hidden sm:block" aria-hidden="true"></div>
+<a data-writer-only href="/write.html" aria-label="Viết bài" class="ed-btn-primary ed-nav-write inline-flex text-[12px]">
+<span class="material-symbols-outlined">edit_note</span>Viết bài
+</a>
+<div class="relative">
+<button id="nav-avatar-btn" class="ed-avatar-btn overflow-hidden flex items-center justify-center active:scale-95 transition-transform" title="Tài khoản" data-action="nav-dropdown">
+<img alt="Ảnh đại diện" class="w-full h-full object-cover hidden" id="nav-avatar-img">
+<span class="material-symbols-outlined ed-icon-soft text-[18px]" id="nav-avatar-placeholder">person</span>
+</button>
+<div class="ed-dropdown-panel absolute right-0 mt-2 w-56 z-50 hidden origin-top-right" id="user-dropdown-menu"></div>
+</div>
+</div>
+</div>
+</nav>
+
+<main class="flex-grow pt-24 md:pt-28 pb-lg px-sm md:px-margin-page w-full max-w-7xl mx-auto">
+
+<div class="mb-lg text-left">
+<a class="tap-target inline-flex items-center gap-1 font-label-md text-label-md mb-sm ed-link-back" href="/index.html"><span class="material-symbols-outlined text-sm">arrow_back</span> Về trang chủ</a>
+<div class="flex items-center gap-2 mb-2">
+<span class="ed-kicker">Thư viện &amp; lưu trữ</span>
+</div>
+<h1 class="ed-hero-title" id="page-title">Tất cả bài viết</h1>
+</div>
+
+<!-- Filters & Search -->
+<div class="ed-panel--low rounded p-sm sm:p-md mb-md sm:mb-lg flex flex-col gap-md" id="filter-search">
+<div class="flex flex-col md:flex-row gap-md justify-between md:items-center">
+<!-- "Danh mục" dropdown, wired in viewall.js's renderTagFilters()/selectTag() -
+     a button + listbox like "Sắp xếp" below, not the chip row this used to
+     be: that row wrapped to several lines on a narrow screen with no clean
+     layout once there were more than a couple of tags, which is exactly what
+     a compact dropdown does not do at any width. hidden by default, same as
+     before - fewer than three tags is nothing worth choosing between. -->
+<div class="flex items-center gap-2 hidden" id="tag-filters-group">
+<span class="ed-icon-faint font-label-md text-label-md">Danh mục:</span>
+<div class="relative" id="tag-dropdown">
+<button type="button" id="viewall-tag-btn" class="ed-inline-dd-btn flex items-center gap-1 font-label-md text-label-md font-semibold" aria-haspopup="listbox" aria-expanded="false">
+<span id="viewall-tag-label">Tất cả</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<div class="ed-dropdown-panel ed-inline-dd-menu hidden" id="viewall-tag-menu" role="listbox" tabindex="-1"></div>
+</div>
+</div>
+<div class="relative w-full md:flex-shrink-0" id="search-wrap">
+<span class="material-symbols-outlined ed-icon-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">search</span>
+<input class="ed-search w-full pl-10 pr-4 py-2 font-body-sm text-body-sm" id="viewall-search" placeholder="Tìm tiêu đề hoặc #hashtag..." type="text" aria-label="Tìm bài viết">
+</div>
+</div>
+<!-- Real sort, wired to server/routes/posts.js's `sort` param (only two
+     values it actually understands - see viewall.js): no "ấn bản phát hành"
+     /"thời lượng đọc" options like the reference, because neither is a
+     column this app orders by.
+     A button + listbox, not a native <select>: the reference's selected-row
+     fill is solid black/white, and a real <select>'s open popup is OS-drawn -
+     Chrome mostly honours option background/color but not reliably the
+     hover state, so it cannot be made to match on every platform. This gives
+     full control and reuses .ed-dropdown-panel/.ed-dropdown-item, the same
+     shell as the nav avatar menu. -->
+<div class="flex items-center gap-2 pt-sm" style="border-top: 1px solid rgb(var(--ed-divider))">
+<span class="material-symbols-outlined ed-icon-faint text-[18px]">sort</span>
+<span class="ed-icon-faint font-label-md text-label-md">Sắp xếp:</span>
+<div class="relative" id="sort-dropdown">
+<button type="button" id="viewall-sort-btn" class="ed-inline-dd-btn flex items-center gap-1 font-label-md text-label-md font-semibold" aria-haspopup="listbox" aria-expanded="false">
+<span id="viewall-sort-label">Mới nhất</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<div class="ed-dropdown-panel ed-inline-dd-menu hidden" id="viewall-sort-menu" role="listbox" tabindex="-1">
+<button type="button" class="ed-dropdown-item ed-inline-dd-option is-selected flex items-center w-full px-3 py-2 text-left" data-value="newest" data-label="Mới nhất" role="option" aria-selected="true">Mới nhất</button>
+<button type="button" class="ed-dropdown-item ed-inline-dd-option flex items-center w-full px-3 py-2 text-left" data-value="views" data-label="Xem nhiều nhất" role="option" aria-selected="false">Xem nhiều nhất</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Result summary -->
+<p class="ed-icon-soft font-body-sm text-body-sm mb-md" id="result-summary"></p>
+
+<!-- Article Grid -->
+<div class="ed-masonry" id="viewall-grid">
+<p class="text-on-surface-variant">Đang tải bài viết...</p>
+</div>
+
+<div class="hidden text-center text-on-surface-variant py-12" id="viewall-empty">Không có bài viết nào khớp với lựa chọn này.</div>
+
+<!-- Pager. viewall.js fills this with page numbers once it knows how many
+     pages the current filter has; it stays hidden while six posts are enough
+     to hold the whole list. -->
+<nav aria-label="Chuyển trang" class="mt-lg hidden" id="viewall-pager"></nav>
+</main>
+
+<!-- Footer -->
+<!-- Just the copyright line now - Liên hệ/Điều khoản are gone (the mailto
+     link and the terms page both), so a footer that only ever held those and
+     this line does not need to exist as anything more. -->
+<footer class="ed-footer w-full py-3 mt-auto">
+<div class="text-center px-sm md:px-margin-page max-w-7xl mx-auto font-body-sm text-body-sm">© <span id="footer-year"></span> <span data-footer-text data-fallback="TuanPA.">TuanPA.</span></div>
+</footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/viewall.js"></script>
+</body>
+</html>

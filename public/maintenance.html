@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Đang bảo trì - TuanPA</title>
+<!-- Every other page fills this from the admin's "favicon" setting via
+     data-setting-href (server/render-html.js) - a substitution this page
+     cannot use, since server/maintenance.js sends the file straight off disk
+     with no templating pass (deliberately: the notice must still render if
+     the DB itself is what's down). Hardcoded to today's actual setting value
+     instead - stale the day an admin next changes it, same trade-off already
+     made for this page's copy/branding, safer than a DB read on the one page
+     that has to survive the DB being the thing that's broken. -->
+<link rel="icon" href="/uploads/1789007537577-0af324c388d336b8.png">
+<!-- The theme switch first, as on every page: the .dark class has to be on <html>
+     before the first paint or a dark-theme reader gets a white flash. Then the
+     three stylesheets the card is actually built from - fonts.css for the body
+     face, common.css for the tokens and the .maintenance-* rules, editorial.css
+     for the Newsreader wordmark face and, more importantly, the .editorial-page
+     retint every OTHER page on the site now carries (see common.css's own
+     comment on this rule for why a standalone page needs that class too).
+     Deliberately NO tailwind.css and NO api.js: this page is what gets served
+     when the rest of the site is misbehaving, so it must not depend on
+     anything that might be part of the problem - editorial.css is a plain
+     stylesheet with no such dependency. Its own <style> is three lines of
+     reset Preflight would otherwise have provided. -->
+<script src="/js/theme.js"></script>
+<!-- Preloaded so the icon subset and the body font's first two faces are
+     discovered without waiting on fonts.css to parse - same reasoning as
+     every other page. Hashes are GENERATED - `npm run fetch:fonts` rewrites
+     everything between the markers below. Do not edit them by hand. -->
+<!-- @generated:font-preload -->
+<link as="font" crossorigin href="/fonts/material-symbols-subset.c7d51076.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-latin.3100e775.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-vietnamese.5c66f9e0.woff2" rel="preload" type="font/woff2">
+<!-- /@generated:font-preload -->
+<link href="/css/fonts.css" rel="stylesheet">
+<link href="/css/common.css" rel="stylesheet">
+<link href="/css/editorial.css" rel="stylesheet">
+<style>
+  /* Preflight lives in tailwind.css, which this page does not load. */
+  body { margin: 0; }
+</style>
+</head>
+<body class="editorial-page">
+<div class="maintenance-wrap">
+  <div class="ed-wordmark">TuanPA</div>
+  <div class="maintenance-card">
+    <div class="maintenance-icon" aria-hidden="true">
+      <!-- A wrench in currentColor: the subsetted icon font carries no wrench
+           glyph, and a name it does not carry renders as nothing at all. -->
+      <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+    </div>
+    <h1 class="maintenance-title">Website đang được bảo trì</h1>
+    <p class="maintenance-text">Mình đang thực hiện một vài cập nhật nhỏ để mang lại trải nghiệm tốt hơn.</p>
+    <p class="maintenance-text">Rất xin lỗi vì sự bất tiện này - hẹn gặp lại bạn trong ít phút nữa nhé!</p>
+    <div class="maintenance-pill">
+      <span class="maintenance-dot" aria-hidden="true"></span>
+      Dự kiến hoạt động trở lại sớm
+    </div>
+    <div class="maintenance-divider"></div>
+    <p class="maintenance-thanks">Cảm ơn bạn đã ghé thăm và kiên nhẫn chờ đợi 💜</p>
+  </div>
+  <footer class="maintenance-foot">© <span id="maintenance-year"></span> TuanPA.</footer>
+</div>
+<script src="/js/maintenance.js"></script>
+</body>
+</html>

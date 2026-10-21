@@ -1,0 +1,16 @@
+node_modules/
+data/
+public/uploads/
+!public/uploads/.gitkeep
+backups/
+tmp/
+
+.env*
+!.env.example
+
+npm-debug.log
+*.log
+*.bak
+*.bak.*
+*.orig
+*.save

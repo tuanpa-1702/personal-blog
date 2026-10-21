@@ -1,0 +1,241 @@
+/* ==========================================================================
+   Image layouts for the article body - the "Bố cục ảnh" block
+   (write.js layout block -> api.js renderLayoutBlockHtml() /
+   server/ssr-content.js). Six layouts, scoped to .prose-content (the class on
+   #post-body, the article's real wrapper - there is no .post on this site):
+
+     .img-side / .img-side--right   portrait 3:4 at 40%, text centred beside it
+     .img-wide                      landscape, column width, max 70vh, caption
+     .split / .split--reverse       3:2 picture and text in two columns
+     .gallery-feature               1 large landscape + 2 portraits stacked
+     .gallery-pair                  2 portraits 4:5 side by side
+     .gallery-masonry               mixed grid, 3 columns (2 on a phone)
+     .gallery-strip                 one row scrolled sideways, arrows on desktop
+
+   Every colour is a theme token, so light, dark and any retint follow. Every
+   picture here is also a lightbox target: post.js prepareArticleImages()
+   walks every #post-body img, so no layout needs code of its own.
+   ========================================================================== */
+
+/* ---- The site-wide rule: no picture in an article is taller than 80vh ----
+   A portrait phone photo used to fill the whole screen on a scroll. Pictures
+   keep their width (so existing posts look as before) and letterbox inside the
+   capped box instead of stretching. */
+.prose-content img {
+  max-height: 80vh;
+  object-fit: contain;
+}
+
+/* Shared pieces */
+.prose-content .ilay {
+  margin: 2rem 0;
+}
+.prose-content .ilay img {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  background: rgb(var(--ed-surface-low, 243 244 243));
+  cursor: zoom-in;
+}
+.prose-content .ilay-caption {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-align: center;
+  color: rgb(var(--ed-ink-faint, 119 118 123));
+}
+.prose-content .ilay-text > :first-child { margin-top: 0; }
+.prose-content .ilay-text > :last-child { margin-bottom: 0; }
+
+/* ---- 1. Portrait beside the text ----
+   Two columns that read as ONE unit, the way the "Về tác giả" card pairs its
+   portrait and bio: picture and text side by side, the text centred on the
+   picture's height and kept close to it. It used to be a float - with a short
+   text (a poem, a caption-length paragraph) the lines clung to the top edge
+   and ran across the whole remaining 60%, leaving a wall of empty space beside
+   a tall portrait, picture and words reading as two separate things. */
+.prose-content .img-side {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 1.25rem 2rem;
+  align-items: center;
+}
+.prose-content .img-side > figure { margin: 0; }
+.prose-content .img-side--right { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.prose-content .img-side--right > figure { order: 2; }
+/* On a short screen the 80vh cap would cut the 3:4 frame down and crop the
+   picture; narrowing it instead keeps the ratio (and the 80vh rule). */
+.prose-content .img-side img {
+  aspect-ratio: 3 / 4;
+  width: min(100%, 60vh);
+  height: auto;
+  margin-inline: auto;
+  object-fit: cover;
+}
+
+/* ---- 2. Wide landscape with caption ---- */
+/* Width follows the 70vh cap (width:auto + the width/height attributes), so a
+   short screen shows the whole picture narrower instead of a cropped band. */
+.prose-content .img-wide img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 70vh;
+  margin-inline: auto;
+  object-fit: contain;
+}
+
+/* ---- 3. Picture and text split in two ---- */
+.prose-content .split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.75rem;
+  align-items: center;
+}
+.prose-content .split > figure { margin: 0; }
+.prose-content .split--reverse > figure { order: 2; }
+.prose-content .split img {
+  aspect-ratio: 3 / 2;
+  width: min(100%, 120vh);
+  height: auto;
+  margin-inline: auto;
+  object-fit: cover;
+}
+
+/* ---- 4. One large landscape + two portraits ---- */
+.prose-content .gallery-feature .ilay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  /* minmax(0, 1fr), not 1fr: a bare 1fr row grows to the picture's intrinsic
+     height and the whole grid ends up as tall as the source photo. */
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  aspect-ratio: 16 / 10;
+  max-height: 80vh;
+  margin-inline: auto; /* capped by the 80vh above it runs narrower than the column */
+}
+.prose-content .gallery-feature .ilay-grid > :first-child { grid-row: 1 / 3; }
+.prose-content .gallery-feature img {
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  object-fit: cover;
+}
+
+/* ---- 5. Two portraits 4:5 ---- */
+.prose-content .gallery-pair .ilay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  max-width: 92%;
+  margin-inline: auto;
+}
+/* The grid, not each picture, is narrowed for a short screen, so the two stay
+   side by side at 4:5 under the 80vh cap: two columns of 32vh + the gap. */
+.prose-content .gallery-pair .ilay-grid { width: min(100%, calc(128vh + 0.5rem)); }
+.prose-content .gallery-pair img {
+  aspect-ratio: 4 / 5;
+  height: auto;
+  object-fit: cover;
+}
+
+/* ---- 6. Mixed masonry ---- */
+.prose-content .gallery-masonry .ilay-grid {
+  column-count: 3;
+  column-gap: 0.5rem;
+}
+.prose-content .gallery-masonry img {
+  height: auto;
+  margin-bottom: 0.5rem;
+  break-inside: avoid;
+  object-fit: cover;
+}
+
+/* ---- 7. Horizontal strip ----
+   One row at a fixed height, each picture at its own width (its real aspect
+   ratio - the width/height attributes give the box before the bytes arrive),
+   scrolled sideways with snap points. Arrows on a pointer device, only when
+   there is something to scroll to (post.js syncStrip()). */
+.prose-content .ilay-strip { position: relative; }
+.prose-content .gallery-strip .ilay-grid {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 0;
+  scrollbar-width: thin;
+  padding-bottom: 0.5rem;
+}
+.prose-content .gallery-strip .ilay-grid:focus-visible {
+  outline: 2px solid rgb(var(--ed-accent, 172 51 17));
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.prose-content .gallery-strip img {
+  flex: 0 0 auto;
+  width: auto;
+  height: min(22rem, 60vh);
+  max-width: 85%;
+  object-fit: cover;
+  scroll-snap-align: start;
+}
+.prose-content .ilay-strip-btn {
+  position: absolute;
+  top: calc(50% - 0.25rem);
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--ed-divider, 228 228 231));
+  background: rgb(var(--ed-surface-lowest, 255 255 255) / 0.92);
+  color: rgb(var(--ed-ink, 26 28 28));
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.prose-content .ilay-strip-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.prose-content .ilay-strip-btn--prev { left: 0.5rem; }
+.prose-content .ilay-strip-btn--next { right: 0.5rem; }
+.prose-content .ilay-strip-btn:disabled { opacity: 0; pointer-events: none; }
+.prose-content .ilay-strip-btn:focus-visible { outline: 2px solid rgb(var(--ed-accent, 172 51 17)); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .prose-content .ilay-strip.is-scrollable .ilay-strip-btn { display: inline-flex; }
+}
+
+/* ---- Phones ---- */
+@media (max-width: 639px) {
+  .prose-content .img-side,
+  .prose-content .img-side--right { grid-template-columns: minmax(0, 1fr); }
+  .prose-content .img-side--right > figure { order: 0; }
+  .prose-content .split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+  .prose-content .split--reverse > figure { order: 0; }
+  /* The large picture on its own row, the two portraits side by side under it. */
+  .prose-content .gallery-feature .ilay-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    aspect-ratio: auto;
+  }
+  .prose-content .gallery-feature .ilay-grid > :first-child { grid-column: 1 / 3; grid-row: auto; }
+  /* height:auto so aspect-ratio decides (the desktop rule's height:100% of an
+     auto row would fall back to the photo's own ratio). */
+  .prose-content .gallery-feature img { height: auto; }
+  .prose-content .gallery-feature .ilay-grid > :first-child { aspect-ratio: 16 / 10; }
+  .prose-content .gallery-feature .ilay-grid > :not(:first-child) { aspect-ratio: 3 / 4; }
+  .prose-content .gallery-pair .ilay-grid { max-width: none; }
+  .prose-content .gallery-masonry .ilay-grid { column-count: 2; }
+  .prose-content .gallery-strip img { height: min(16rem, 55vh); }
+}

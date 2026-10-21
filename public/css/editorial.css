@@ -1,0 +1,2244 @@
+/* ==========================================================================
+   Editorial redesign - shared by index.html and post.html
+   ==========================================================================
+   Scoped entirely to .editorial-page (set on <body> on both pages) so this
+   file cannot bleed onto any page that has not opted in, even where it
+   overrides a shared common.css rule (.reaction-btn, .prose-content,
+   .related-card, .tap-target, ...) by re-declaring the same property at
+   higher specificity (".editorial-page .reaction-btn" beats ".reaction-btn").
+   The rest of the site keeps the "Electric Silicon" glass/gradient theme
+   (tailwind.config.js, common.css) untouched.
+
+   Palette and type scale are taken from two reference mockups the project
+   owner supplied (index.html / post.html style references) built around
+   Material-3-style semantic roles - surface/on-surface/secondary/outline,
+   the same NAMING SCHEME tailwind.config.js already uses for the site's own
+   theme, just with different values plugged in. Reusing that naming here
+   (as --ed-* rather than overwriting the shared --c-* tokens, to keep the
+   change scoped to these two pages) means every component below reads as
+   "which role", not "which hex".
+
+   Three type tiers, per the brief:
+     display / headline / title  -> Newsreader (transitional serif, self-hosted
+                                     below) - mastheads, headlines, pull quotes.
+     body / label / UI           -> Inter (already self-hosted for
+                                     the whole site in css/fonts.css) - copy,
+                                     nav, meta, buttons.
+     code / tabular data         -> JetBrains Mono (self-hosted below) - code
+                                     blocks and lists of numbers.
+   ========================================================================== */
+
+/* ---- Newsreader: the display serif ----
+   Self-hosted for the same reason as Inter in css/fonts.css: same-
+   origin means the render-blocking stylesheet discovers the faces itself, no
+   third-party DNS/TLS round-trip on the critical path, and font-src 'self' in
+   the CSP (server/security-headers.js) would refuse a fonts.gstatic.com URL
+   outright - "lấy từ CDN Google" means the font was SOURCED from Google Fonts,
+   the same place Inter and Material Symbols came from, not that
+   the page links there directly at runtime.
+
+   Google ships Newsreader and JetBrains Mono as variable fonts: fetching
+   Google's own css2 endpoint for several weights and diffing the returned
+   URLs showed 400/500/600(/700) all pointing at the SAME file per subset, so
+   one @font-face per subset with a WEIGHT RANGE is correct and is what lets
+   500/600 render as real optical weights instead of the browser's synthetic
+   (faux) bold. Newsreader's italic is fetched only at 400 - the one weight
+   this page's pull-quotes/standfirst actually use. Three subsets each (latin,
+   latin-ext, vietnamese), matching the body family's own split in
+   fetch-fonts.py, so a page mixing Vietnamese and Latin text pulls only the
+   glyphs it can show. font-display: swap - neither face is the very first
+   paint (Inter body text is), so there is no flash of invisible
+   text to avoid the way the icon font's `block` does. */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/newsreader-n-400-latin.62981321.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/newsreader-n-400-latin-ext.ac6fa9ed.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/newsreader-n-400-vietnamese.f0dcc979.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/newsreader-i-400-latin.fa9b9004.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/newsreader-i-400-latin-ext.b775f4fa.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/newsreader-i-400-vietnamese.f7e98aa7.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* ---- JetBrains Mono: code blocks and tabular numbers ---- */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/jbmono-n-400-latin.83c005d4.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/jbmono-n-400-latin-ext.db5ff4db.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/jbmono-n-400-vietnamese.c89b9cc0.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* ---- Tokens: surface/on-surface/secondary/outline, not glass/indigo-gradient ----
+   Light values from the reference mockups' tailwind.config almost verbatim;
+   dark is this file's own "night edition" of the same roles (the references
+   had no dark palette to draw from), following the site's own convention of
+   swapping which end of each pair is "near black" vs "near white". */
+.editorial-page {
+  --ed-bg: 249 249 248;              /* surface / background */
+  --ed-surface-lowest: 255 255 255;  /* surface-container-lowest: white card */
+  --ed-surface-low: 243 244 243;     /* surface-container-low: recessed panel */
+  --ed-surface: 238 238 237;         /* surface-container: chips, pills */
+  --ed-surface-high: 232 232 231;    /* surface-container-high: image placeholder */
+  --ed-ink: 26 28 28;                /* on-surface: headlines, strong text */
+  --ed-ink-soft: 71 70 75;           /* on-surface-variant: body copy */
+  --ed-ink-faint: 119 118 123;       /* outline: meta, timestamps, captions */
+  --ed-divider: 228 228 231;         /* outline-variant: hairlines, card borders - #E4E4E7 */
+  --ed-primary: 0 0 0;               /* primary: solid buttons, brand mark */
+  --ed-on-primary: 255 255 255;
+  --ed-primary-container: 27 27 30;  /* a near-black card variant (code note) */
+  --ed-accent: 172 51 17;            /* secondary: the one accent, burnt rust */
+  --ed-on-accent: 255 255 255;
+  --ed-accent-soft: 255 219 209;     /* secondary-fixed: pale chip/avatar bg */
+  --ed-on-accent-soft: 60 8 0;
+}
+
+/* ---- Retint-by-alias: the shared --c-* tokens common.css/write.css/media.css
+   read from, redefined here to the --ed-* palette above rather than
+   overwriting common.css's own :root/.dark values.
+   write.html and admin.html lean on this heavily: both are built from
+   hundreds of components in write.css/common.css (the rich-text toolbar, its
+   docked bar and floating menus, .glass-panel, .reaction-btn, .chip, form
+   fields, the media picker, ...) that already read colour through
+   rgb(var(--c-electric-indigo)) etc. Redefining those SAME variables inside
+   .editorial-page reskins every one of them automatically, with no risk of
+   drifting out of step with a class list this file does not fully enumerate -
+   the alternative was retinting each component here one at a time, which is
+   both far more work and one missed selector away from a component that
+   silently stays on the old theme.
+   This also reaches the auth modal (js/api.js injectAuthModal()), which is a
+   direct child of <body> like everything else on the page: on an editorial
+   page it now matches the page it opens over, rather than being the one
+   remaining glass-and-indigo surface left behind.
+   Only the roles actually visible in the UI are aliased - --c-error/
+   --c-success/--c-rt-mark (the highlighter) and the --shadow- / --glass-wash-
+   literals stay as common.css defines them: the first three are semantic,
+   not brand colours, and the shadows bake their old colour into an rgba()
+   string rather than composing it from a variable, so aliasing --c-* cannot
+   reach them - a lower-priority gap, left as-is here. */
+.editorial-page {
+  --c-primary: var(--ed-accent);
+  --c-on-primary: var(--ed-on-accent);
+  --c-primary-container: var(--ed-accent);
+  --c-on-primary-container: var(--ed-on-accent);
+  --c-electric-indigo: var(--ed-accent);
+  /* Deliberately NOT the same value as --c-primary/--c-electric-indigo: this is
+     the ONE token write.css's "Lưu bài viết" button reaches for on :hover
+     (bg-surface-tint), and hovering to the same colour the button already is
+     would drop that button's only colour-based hover feedback. */
+  --c-surface-tint: var(--ed-ink);
+
+  --c-secondary: var(--ed-accent);
+  --c-on-secondary: var(--ed-on-accent);
+  --c-secondary-container: var(--ed-accent);
+  --c-on-secondary-container: var(--ed-on-accent);
+  /* The auth modal's info banners ("Email này chưa có tài khoản...", the OTP
+     hints) are bg-secondary-fixed/text-on-secondary-fixed-variant - a pastel
+     BLUE in common.css's own palette that nothing above reaches (a distinct
+     token pair from --c-secondary-container, not used anywhere else on an
+     editorial page - see the grep in this session's own notes). Aliased to
+     the same soft-accent pair chips already use, so a banner reads as a
+     quieter version of the site's one accent instead of a leftover blue. */
+  --c-secondary-fixed: var(--ed-accent-soft);
+  --c-on-secondary-fixed-variant: var(--ed-on-accent-soft);
+
+  /* admin.html's own success states (settings saved, email test passed, OAuth
+     consent granted, a published post's status pill, a handled-report tag)
+     read tertiary-container/tertiary-fixed-dim - a pink/magenta pair (135 22
+     91 in common.css :root) this file's aliasing pass missed the first time
+     through, since nothing on the already-migrated pages used it. Same move
+     as --c-secondary* above: aliased to the one accent rather than left as a
+     second, unrelated brand colour. */
+  --c-tertiary: var(--ed-accent);
+  --c-on-tertiary: var(--ed-on-accent);
+  --c-tertiary-container: var(--ed-accent);
+  --c-on-tertiary-container: var(--ed-on-accent);
+  --c-tertiary-fixed: var(--ed-accent-soft);
+  --c-tertiary-fixed-dim: var(--ed-accent-soft);
+  --c-on-tertiary-fixed: var(--ed-on-accent-soft);
+  --c-on-tertiary-fixed-variant: var(--ed-on-accent-soft);
+
+  --c-background: var(--ed-bg);
+  --c-on-background: var(--ed-ink);
+  --c-surface: var(--ed-bg);
+  --c-on-surface: var(--ed-ink);
+  --c-surface-variant: var(--ed-surface);
+  --c-on-surface-variant: var(--ed-ink-soft);
+  --c-surface-container-lowest: var(--ed-surface-lowest);
+  --c-surface-container-low: var(--ed-surface-low);
+  --c-surface-container: var(--ed-surface);
+  --c-surface-container-high: var(--ed-surface-high);
+  --c-surface-container-highest: var(--ed-surface-high);
+
+  --c-outline: var(--ed-ink-faint);
+  --c-outline-variant: var(--ed-divider);
+
+  /* Glass panels flatten to a near-solid surface: with almost nothing
+     translucent left, backdrop-filter: blur() (still set by .glass-panel
+     itself, untouched here) has nothing left to blur. */
+  --c-glass-surface: rgb(var(--ed-surface-lowest) / 0.98);
+  --c-glass-border: rgb(var(--ed-divider) / 1);
+  --c-field: rgb(var(--ed-ink) / 0.04);
+
+  /* The --shadow-* tokens are NOT composed from a --c-* variable at use time -
+     each one bakes its colour into a literal rgba() string (common.css :root),
+     which is why the --c-* alias above cannot reach them: overriding --c-x
+     changes nothing for a shadow that never reads --c-x in the first place.
+     Every one of them was rgba(79, 70, 229, ...) - the electric-indigo triplet
+     - in light mode, which is exactly the kind of decorative brand-colour wash
+     this redesign drops; re-declared here in a neutral black at the same
+     offsets/blur/alpha the originals used, so every button, avatar and lifted
+     card that reaches for --shadow-cta/--shadow-lift/etc. (write.css and
+     common.css both do, extensively) casts an ordinary shadow instead of a
+     tinted glow. --shadow-focus is the one exception, kept ON the accent: a
+     coloured focus ring is an intentional affordance, not a decorative wash. */
+  --shadow-ambient: 0 20px 40px rgba(0, 0, 0, 0.08);
+  --shadow-ambient-t: 0 -20px 40px rgba(0, 0, 0, 0.08);
+  --shadow-lift: 0 26px 48px rgba(0, 0, 0, 0.14);
+  --shadow-cta: 0 6px 16px rgba(0, 0, 0, 0.22);
+  --shadow-avatar: 0 10px 22px rgba(0, 0, 0, 0.18);
+  --shadow-focus: 0 0 0 4px rgb(var(--ed-accent) / 0.18);
+  --shadow-cta-hover: 0 14px 30px rgba(0, 0, 0, 0.26);
+  --shadow-cta-lg: 0 10px 24px rgba(0, 0, 0, 0.2);
+  --shadow-google: 0 8px 20px rgba(0, 0, 0, 0.12);
+  --shadow-editor: 0 10px 30px rgba(0, 0, 0, 0.06);
+
+  /* admin.html's "frosted-glass recipe" (its own inline <style>, "Overview tab"
+     comment): a white gloss wash poured over .glass-card plus an inset rim
+     highlight - the gleam half of glassmorphism that the --c-* alias above
+     never reached (it composes from a literal rgba(), not a --c-* variable,
+     same reason the --shadow-* block above has to be redeclared rather than
+     aliased). Flattened to fully transparent here rather than in admin.html
+     itself, so every card built from these two tokens (.overview-card and
+     anything else that reads them) goes flat in one place. */
+  --glass-wash-1: rgba(0, 0, 0, 0);
+  --glass-wash-2: rgba(0, 0, 0, 0);
+  --glass-inset: inset 0 0 0 rgba(0, 0, 0, 0);
+}
+html.dark .editorial-page {
+  /* Dark mode's own --shadow-* set (common.css .dark) is already a neutral
+     black at every one of these except --shadow-focus, which is left as a
+     light-indigo glow (rgba(182, 178, 255, ...)) - re-pointed at the dark
+     palette's accent for the same reason as the light override above. */
+  --shadow-focus: 0 0 0 4px rgb(var(--ed-accent) / 0.28);
+  /* Dark mode's glass-edge/seam highlights (admin.html's cards) are a light
+     indigo tint (rgba(195, 192, 255, ...)) in common.css; re-pointed at the
+     accent for the same reason as the shadows above. Light mode's own values
+     are already a neutral white wash, so nothing to override there. */
+  --glass-edge: rgb(var(--ed-accent) / 0.18);
+  --glass-seam: rgb(var(--ed-accent) / 0.16);
+  /* "Dim Slate" - replaces the earlier "Warm Sepia & Coffee" pass (same
+     session, superseded rather than kept as a second theme option): a navy-
+     leaning slate instead of a warm brown, aimed at the same "no halation on
+     a long technical read" goal by a different route - cool and desaturated
+     rather than warm, the GitHub-dark-mode school of dark UI rather than the
+     Kindle-warmth one. --ed-bg (#161b22) is the value the brief gave
+     directly; --ed-ink is picked to clear WCAG AAA against it (~11.2:1,
+     the brief's own stated bar) rather than guessed from the reference
+     image, which named a ratio but not a hex for the text. --ed-accent
+     moves from the site's usual coral/amber to a clear sky blue - the
+     colour the reference uses for the "Dim Slate" toggle state, the TOC's
+     current-section mark and inline links alike. */
+  --ed-bg: 22 27 34;
+  --ed-surface-lowest: 33 38 45;
+  --ed-surface-low: 28 33 40;
+  --ed-surface: 37 42 50;
+  --ed-surface-high: 44 49 58;
+  --ed-ink: 201 209 217;
+  --ed-ink-soft: 139 148 158;
+  --ed-ink-faint: 100 108 118;
+  --ed-divider: 48 54 61;
+  --ed-primary: 201 209 217;
+  --ed-on-primary: 18 22 28;
+  --ed-primary-container: 44 49 58;
+  --ed-accent: 96 165 250;
+  --ed-on-accent: 8 23 48;
+  --ed-accent-soft: 30 58 95;
+  --ed-on-accent-soft: 191 219 254;
+}
+/* "Đọc ban đêm" - Warm Sepia & Coffee, the reader-paper-warmth night mode
+   (Night Shift / Kindle warmth school), offered BESIDE Dim Slate rather than
+   replacing it. theme.js puts .dark AND .sepia on <html>, so everything the
+   dark block above sets (shadows, focus ring, glass edges, colour-scheme)
+   still applies and only the palette is re-pointed here. Values from the
+   reference: ground #24201d, ink #dcd3c9 (~11.6:1, AAA), a honey-gold
+   accent for links, the active picker segment and inline code - no blue
+   anywhere on the page. */
+html.dark.sepia .editorial-page {
+  --ed-bg: 36 32 29;
+  --ed-surface-lowest: 44 39 35;
+  --ed-surface-low: 41 36 32;
+  --ed-surface: 50 45 40;
+  --ed-surface-high: 60 54 47;
+  --ed-ink: 220 211 201;
+  --ed-ink-soft: 189 178 165;
+  --ed-ink-faint: 145 134 120;
+  --ed-divider: 62 55 48;
+  --ed-primary: 220 211 201;
+  --ed-on-primary: 36 32 29;
+  --ed-primary-container: 60 54 47;
+  --ed-accent: 232 186 72;
+  --ed-on-accent: 40 28 6;
+  --ed-accent-soft: 78 61 30;
+  --ed-on-accent-soft: 246 224 172;
+}
+.editorial-page {
+  background: rgb(var(--ed-bg));
+  color: rgb(var(--ed-ink));
+}
+.editorial-page ::selection {
+  background: rgb(var(--ed-accent) / 0.25);
+  color: rgb(var(--ed-ink));
+}
+
+/* ---- Type ---- */
+.ed-serif { font-family: 'Newsreader', Georgia, 'Times New Roman', serif; }
+.ed-mono { font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; }
+
+/* #nav-brand in common.css carries line-height:1.35 + a translateY offset
+   - a correction hand-derived for the OLD header brand (whichever sans body
+   family was live at the time, bg-clip-text gradient, 48px/32px, see that
+   rule's own long comment for the font-metric derivation, kept current
+   whenever the family changes). Nothing on this site still uses that gradient
+   treatment - bg-clip-text is gone from every page - but the ID rule is
+   still there and still applies, at a size (30px) and font (Newsreader
+   serif) it was never computed for, which is exactly what was pushing the
+   wordmark up out of true centre. Neutralised here rather than deleted at
+   the source: harmless to leave for whatever the next brand treatment is,
+   as long as editorial pages stop reading it. */
+.editorial-page #nav-brand {
+  line-height: normal;
+  transform: none;
+}
+/* Paired with .ed-nav-links' align-self: baseline below - the two only
+   share a baseline-alignment group (and so actually land on the same
+   text baseline) when BOTH opt out of the row's own items-center. Tried
+   centre and a hand-measured px offset first; both matched only the
+   line-boxes' geometric edges, which sit at different depths below the
+   true glyph baseline in a serif wordmark vs a smaller sans nav link, so
+   the text itself still looked off regardless of either one's own size.
+   Baseline alignment is the one that measures to an exact 0px gap without
+   depending on either font-size, so it keeps working if the wordmark's own
+   size is ever tuned again - unlike a hand-measured px offset would.
+   Desktop-only: below 768px .ed-nav-links is display:none (not in this
+   flex row at all, replaced by the hamburger button, which has no text
+   baseline of its own to share), so baseline-aligning #nav-brand against
+   nothing just pushed the wordmark off the row's true vertical centre -
+   the bug this session's next report was about. */
+@media (min-width: 768px) {
+  .editorial-page #nav-brand { align-self: baseline; }
+}
+.ed-wordmark {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 1.375rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: rgb(var(--ed-ink));
+}
+.ed-wordmark:hover { color: rgb(var(--ed-accent)); }
+
+/* A small tracked NAV label. Text only, no pill: a nav link is not a category.
+   Full --ed-ink at rest, not --ed-ink-soft: this is the header's own primary
+   navigation, read from across the room, not secondary text beside
+   something more important - same reasoning as #post-content .prose-content
+   and .ed-dropdown-item/.side-nav-item below. Hover/active have nowhere
+   further to go, so they stay the same colour with only weight/underline to
+   mark the state. */
+.ed-nav-link {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: rgb(var(--ed-ink));
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+/* Accent, not a darken-on-hover step: rest is already full --ed-ink, same as
+   .ed-wordmark's own hover right above, so there is nowhere further "dark"
+   to go for feedback. */
+.ed-nav-link:hover { color: rgb(var(--ed-accent)); }
+.ed-nav-link.is-active {
+  color: rgb(var(--ed-ink));
+  font-weight: 700;
+}
+/* The nav's 4-5 site links - was `hidden md:flex`, a Tailwind responsive
+   utility pair that turned out to not exist: `.md\:flex` is not in
+   tailwind.css (the CLI that would compile a NEW one is broken on this
+   server - see the file's own header comment on that constraint), so
+   `hidden` had nothing to override at ANY width and these links have been
+   invisible on every page, at every screen size, this entire redesign - not
+   a mobile-only gap, an always-gap. Hand-authored here instead of guessing
+   at another Tailwind pair that might also silently not exist. */
+.ed-nav-links {
+  display: none;
+  align-items: center;
+  gap: 1.5rem;
+  /* align-self, not the row's align-items: center - see #nav-brand above
+     for why. */
+  align-self: baseline;
+}
+@media (min-width: 768px) {
+  .ed-nav-links { display: flex; }
+}
+/* Mobile menu button: the reverse of .ed-nav-links above (visible below
+   768px, gone at/above it) - the links themselves were simply absent on a
+   phone until now, with no way at all to reach Điều khoản/Liên hệ short of
+   guessing a URL. align-self:center because the row it sits in is
+   items-baseline (for the wordmark/link alignment above), and a button has
+   no text baseline worth aligning by. */
+.ed-hamburger-btn {
+  display: inline-flex;
+  align-self: center;
+}
+@media (min-width: 768px) {
+  .ed-hamburger-btn { display: none; }
+}
+/* Tablet (iPad portrait, ~768-1023px): .ed-nav-links switches on at the
+   same 768px breakpoint as the header search box's own `sm:block`
+   (640px, already passed by then) - real nav links plus a full search
+   input plus the write button and avatar, all landing on screen together,
+   measured to overflow the header by ~17px right there at 768px, with
+   the search input (the one genuinely wide item among them) pushed half
+   off the edge. Delayed to 1024px+ instead - hand-written for the same
+   reason .ed-nav-links itself is: lg:block/lg:hidden are not in the
+   compiled tailwind.css on this server, so a plain lg: pair would fail
+   silently the same way `hidden md:flex` once did. The icon-only search
+   toggle (already the <640px pattern) covers the 768-1023px gap instead
+   of the full field. IDs, not classes: `#header-search-wrap`/
+   `#header-search-toggle` in the markup, one per page. */
+#header-search-wrap { display: none; }
+#header-search-toggle { display: inline-flex; }
+@media (min-width: 1024px) {
+  #header-search-wrap { display: block; }
+  #header-search-toggle { display: none; }
+}
+/* The SAME .ed-nav-links element doubles as the mobile menu's contents when
+   toggled open (js/api.js, mobile-nav-toggle) - a dropdown-style panel
+   instead of the desktop's inline row, so there is exactly one copy of these
+   links per page rather than a second list to keep in step. Scoped to the
+   same max-width the desktop rule's min-width excludes, so the two never
+   fight over the same viewport. */
+@media (max-width: 767px) {
+  .ed-nav-links.mobile-open {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: fixed;
+    top: 4rem;
+    left: 0;
+    right: 0;
+    background: rgb(var(--ed-bg));
+    border-bottom: 1px solid rgb(var(--ed-ink) / 0.1);
+    padding: 1rem 1.25rem;
+    gap: 0.875rem;
+    z-index: 40;
+  }
+}
+/* The mobile menu's own light/dark row - the header's theme-toggle icon
+   button is `hidden sm:inline-flex` (desktop-only), so a phone had no way to
+   switch theme at all. Lives in the markup right in .ed-nav-links (one more
+   row, same list), but must stay OUT of the desktop inline row that same
+   element becomes at 768px+, where the icon button already covers it -
+   hence the explicit off switch below, since .ed-nav-links itself does not
+   scope this away on its own. */
+.ed-mobile-theme-row {
+  display: none;
+}
+@media (max-width: 767px) {
+  .ed-nav-links.mobile-open .ed-mobile-theme-row {
+    display: flex;
+    align-items: center;
+    /* space-between, not the row's own gap: the label sits at the left edge
+       like every other mobile menu link, the switch pins to the right edge -
+       a fixed gap would leave the switch stranded wherever the label's text
+       length happened to end. */
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    padding-top: 0.875rem;
+    border-top: 1px solid rgb(var(--ed-divider));
+  }
+}
+/* iOS-style track+thumb, replacing the old sun/moon icon-and-swapping-label
+   pair: a switch reads its OWN state at a glance (thumb position) rather than
+   asking the reader to parse text that describes the CURRENT theme ("Giao
+   diện sáng" while light, i.e. not the action a tap performs) - the same
+   `.dark` class on <html> that already drives every other themed rule here
+   drives this one too, so no JS beyond the existing data-action="theme-toggle"
+   dispatch is needed. */
+.theme-switch {
+  display: inline-block;
+  flex-shrink: 0;
+  position: relative;
+  width: 2.5rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  background: rgb(var(--ed-ink-faint) / 0.35);
+  transition: background-color 0.2s ease;
+}
+.theme-switch-thumb {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: rgb(var(--ed-surface-lowest));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+/* Travel distance = track width - thumb width - (2 x thumb inset) =
+   2.5rem - 1rem - 0.375rem = 1.125rem. */
+.dark .theme-switch { background: rgb(var(--ed-accent)); }
+.dark .theme-switch-thumb {
+  transform: translateX(1.125rem);
+  background: rgb(var(--ed-on-accent));
+}
+/* Every .ed-* class below that sets its own `display` silently wins over
+   Tailwind's .hidden (tailwind.css) whenever both land on the same element:
+   same specificity (one class each), but this file loads after
+   tailwind.css, so ties go to whichever declared `display` LAST - never
+   `.hidden`, regardless of which of the two was meant to win. Confirmed in
+   practice: the nav "Viết bài" button (.ed-btn-primary) stayed visible to a
+   signed-out visitor even though renderNavAuthState() in js/api.js was
+   correctly toggling .hidden on for them - .ed-btn-primary's own
+   display:inline-flex was the declaration that actually painted. One
+   compound rule per offending class, rather than reaching for !important on
+   the shared .hidden utility itself (a much bigger blast radius to reason
+   about for a fix that only ever needs to apply here). */
+.ed-chip.hidden,
+.ed-kicker.hidden,
+.ed-byline.hidden,
+.ed-btn-primary.hidden,
+.ed-btn-text.hidden,
+.ed-link-arrow.hidden,
+.ed-grid.hidden,
+.ed-toc-link.hidden,
+.ed-post-tab.hidden {
+  display: none;
+}
+.ed-nav-divider {
+  width: 1px;
+  height: 1rem;
+  background: rgb(var(--ed-divider));
+}
+/* align-self, not the markup's own w-fit utility: that class does not exist
+   in css/tailwind.css (the CDN compiler that would generate it on demand is
+   broken on this mount - see the note on that constraint elsewhere in this
+   file), so this link stretched to the FULL width of its flex-column parent
+   (header's default align-items: stretch) instead of shrinking to its own
+   content. Below 1024px that combined with .tap-target's own
+   justify-content: center (common.css, meant for the square icon-only
+   buttons that also carry that class) to centre "Trang chủ" in the middle
+   of a box as wide as the whole header, instead of at its left edge next
+   to the heading below it. */
+.ed-link-back {
+  align-self: flex-start;
+  color: rgb(var(--ed-ink-soft));
+  transition: color 0.15s ease;
+}
+.ed-link-back:hover { color: rgb(var(--ed-accent)); }
+/* Hashtags: flat mono text, charcoal (the quieter of the two tag roles - see
+   .ed-chip below). #name is already in the markup (js/viewall.js, js/post.js
+   build the "#" themselves, since a post can carry several), so no generated
+   content is needed here the way .ed-chip needs one. */
+.ed-hashtag {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: rgb(var(--ed-ink-faint));
+}
+.ed-hashtag:hover { color: rgb(var(--ed-ink)); }
+
+/* ---- Profile hero (profile.html): cover banner + overlapping avatar ----
+   Facebook's own layout - a wide banner with the avatar sitting half on it,
+   half on the card below - swapped in for what used to be a plain
+   avatar-beside-name row inside .ed-panel. The panel itself gains
+   .ed-panel--flush (padding: 0) so the cover can run edge-to-edge and still
+   pick up the panel's own border/radius/background for the card beneath it;
+   .profile-hero-text carries the padding every OTHER .ed-panel gets for free.
+   Kept square-cornered (6px, on the existing inline style on #profile-avatar
+   in profile.html - unchanged) rather than a circle - this site's one shape
+   language (nav avatar, chips, buttons) is 4-6px corners everywhere, and a
+   circular avatar here would be the one exception to it.
+
+   The avatar is positioned against .profile-cover, not against the section
+   or by a negative margin on the text below it: `bottom: 0; transform:
+   translateY(50%)` puts exactly half of the avatar's OWN height below the
+   cover's bottom edge regardless of how tall the avatar or the cover ends up
+   rendering (a fixed negative-margin px count would need retuning per
+   breakpoint and drifts out of sync the moment either size changes) - and it
+   leaves .profile-hero-text in plain, unshifted document flow, so the
+   avatar's overlap never drags the name/bio column up with it the way a
+   margin on a shared flex row would. */
+.ed-panel--flush { padding: 0; }
+.profile-cover {
+  position: relative;
+  width: 100%;
+  /* Was 3/1 at up to 15rem tall - a wide, shallow strip that left a lot of a
+     cover photo's own subject (usually centred, not hugging the top edge)
+     cropped away by object-fit:cover. Both numbers moved together: a lower
+     ratio alone without raising the cap would just have clipped a WIDE
+     screen's cover at the same 15rem it already hit, so the two have to
+     rise as a pair or only some viewport widths would actually look
+     taller. */
+  aspect-ratio: 2.4 / 1;
+  max-height: 20rem;
+  background: rgb(var(--ed-surface-low));
+}
+.profile-cover-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px 4px 0 0;
+}
+.profile-avatar-wrap {
+  position: absolute;
+  left: 1.5rem;
+  bottom: 0;
+  transform: translateY(50%);
+  /* Explicit rather than relying on paint order: a positioned box with
+     z-index:auto DOES paint after its in-flow siblings by spec, which is the
+     right side of that rule here, but the overlap this exists for is exactly
+     the kind of visual detail not worth leaving to "should already work". */
+  z-index: 1;
+}
+@media (min-width: 640px) {
+  .profile-avatar-wrap { left: 2rem; }
+}
+#profile-avatar { background: rgb(var(--ed-surface-lowest)); }
+/* The camera-icon buttons that replaced the "Chỉnh sửa hồ sơ" panel's old
+   avatar/cover upload fields - see the comment on their markup in
+   profile.html. A small solid circle over the picture, not a pill with a
+   label: both triggers sit ON the thing they change, so the icon alone
+   already says what clicking it does. Dark and semi-transparent regardless
+   of theme, because it has to read against WHATEVER photo is currently
+   underneath it, not against the page's own surface colour. */
+.profile-photo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  border: 2px solid rgb(var(--ed-surface-lowest));
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  flex-shrink: 0;
+}
+.profile-photo-btn:hover { background: rgb(0 0 0 / 0.75); }
+.profile-photo-btn .material-symbols-outlined { font-size: 18px; }
+/* Sits on the avatar's own bottom-right corner, half on/half off it the same
+   way the avatar itself sits on the cover - .profile-avatar-wrap is already
+   the positioning context (position: absolute), so this is relative to the
+   avatar image, not to the cover behind it. */
+.profile-photo-btn--avatar { position: absolute; right: -0.25rem; bottom: -0.25rem; z-index: 2; }
+/* The cover's own two controls, at opposite top corners rather than stacked
+   in one - "Chỉnh sửa hồ sơ" top-left, the camera icon top-right, level
+   with each other. Top, not bottom, on both: .profile-avatar-wrap (above)
+   sits bottom:0 with half its own height below the cover, which on a
+   narrow screen where it also centres (the 479px rule above) covers
+   roughly the whole bottom strip of the cover, wide enough to reach either
+   bottom corner - a bottom-anchored control there collided with it,
+   sitting half ON the avatar photo. The top edge is never where the avatar
+   reaches, at any width, so both are clear of it unconditionally rather
+   than only past whichever width the avatar happens to stay clear at. */
+.profile-photo-btn--cover { position: absolute; right: 0.75rem; top: 0.75rem; z-index: 2; }
+/* "Chỉnh sửa hồ sơ" - icon-only now, the same small circle as the two
+   camera buttons either side of it, not a permanently-spelled-out pill:
+   what it does surfaces on hover/focus instead (.profile-icon-tooltip
+   below), the same way the camera buttons' own title always has. Top-left,
+   level with the camera icon at top-right - opposite corners of the
+   cover's top edge, which .profile-avatar-wrap never reaches (see the
+   comment on .profile-photo-btn--cover above for why top, not bottom). */
+.profile-photo-btn--edit { position: absolute; left: 0.75rem; top: 0.75rem; z-index: 2; }
+@media (min-width: 640px) {
+  .profile-photo-btn--cover,
+  .profile-photo-btn--edit { right: 1rem; top: 1rem; }
+  .profile-photo-btn--edit { left: 1rem; right: auto; }
+  .profile-photo-btn--cover {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .profile-photo-btn--cover .material-symbols-outlined { font-size: 20px; }
+}
+/* The custom tooltip every [data-tooltip] element on this page's photo/edit
+   controls carries - title alone is a real fallback (a screen reader
+   reads it, a long-press on touch shows it) but its OWN popup is native,
+   slow to appear and unstyled; this is the "actually visible on a normal
+   hover" half of the pair, not a replacement for it. Content lives in the
+   attribute rather than duplicated into markup, so the two can never name
+   the button two different things. Pointer-events: none so the tooltip
+   itself is never what a click lands on.
+   No `[data-tooltip] { position: relative }` here on purpose: every current
+   holder of the attribute (.profile-photo-btn--edit/--cover/--avatar)
+   already carries position: absolute from its own, more specific rule
+   above - which already gives ::after a positioning context, so this would
+   only ever be redundant for them. It very nearly was not: an EARLIER
+   version of this rule set position: relative unconditionally, which ties
+   those buttons' own position: absolute on specificity (0,1,0 each) and
+   wins on being declared later - overriding it back to relative and
+   dropping all three out of their pinned corners into plain document flow,
+   which is what actually shipped, briefly. Restated as a comment instead of
+   the declaration so the lesson survives even though the rule that caused
+   it does not. */
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.3rem 0.625rem;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.85);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 3;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after { opacity: 1; }
+/* .profile-photo-btn--edit and .profile-photo-btn--cover sit at the LEFT and
+   RIGHT edges of the cover respectively - a centred tooltip under either
+   would run off that same edge on a narrow card, so each grows inward from
+   its own edge instead of from its own centre. .profile-photo-btn--avatar
+   has no override: it sits well clear of both card edges, so the default
+   centred tooltip never has anywhere to overflow into. */
+.profile-photo-btn--edit::after { left: 0; transform: none; }
+.profile-photo-btn--cover::after { left: auto; right: 0; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  [data-tooltip]::after { transition: none; }
+}
+/* Click-to-enlarge cursor on the two photos themselves - the camera/edit
+   buttons already signal THEIR OWN click target with a hand cursor, this is
+   the same signal for the rest of either picture. #profile-avatar always has
+   a src (a dicebear default when the account never set one - see
+   profile.js), so it is unconditionally clickable; the cover has a real
+   empty state (no src at all, see setCoverImg()'s own comment), so its
+   cursor - and the click handler behind it, wireProfileLightbox() in
+   profile.js - both gate on .has-image, a class only ever added once a real
+   photo is showing. */
+#profile-avatar { cursor: pointer; }
+.profile-cover-img.has-image { cursor: pointer; }
+/* The avatar/cover lightbox: one photo, full-bleed, no chrome beyond a close
+   button - see the markup's own comment in profile.html for why this is not
+   just post.html's #lightbox reused. z-index 100, the same layer post.html's
+   own lightbox sits at (both are a page's one full-screen image viewer,
+   never open on top of each other since no page loads both): still below
+   api.js's #maintenance-scrim (120, see that rule's own comment) either
+   page's own fetch failures can paint over it. */
+.profile-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgb(0 0 0 / 0.85);
+}
+.profile-lightbox.hidden { display: none; }
+.profile-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 4px;
+  object-fit: contain;
+}
+.profile-lightbox-close {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.profile-lightbox-close:hover { background: rgb(0 0 0 / 0.75); }
+/* Clears the avatar's protruding bottom half - HALF of its own height, which
+   for the w-40 (10rem/160px) size .profile-avatar carries from 768px up is
+   5rem, not the 4.5rem this used to give it: the name (.ed-hero-title, a big
+   bold face) collided with the avatar's own bottom edge at that size, an
+   overlap rather than the intended half-on/half-off frame. 6rem clears the
+   largest (w-40) case with margin to spare for the border/shadow ring
+   #profile-avatar's own inline style adds on top of the image itself. */
+/* Left-aligned at every width, avatar included - a phone reader gets the
+   same layout a desktop one does, just narrower, rather than a centred
+   variant of it. (This page used to centre both below 479px; removed
+   rather than kept as a second layout to maintain.) */
+.profile-hero-text { padding: 6rem 1.5rem 1.5rem; }
+@media (min-width: 640px) {
+  .profile-hero-text { padding: 6rem 2rem 2rem; }
+}
+
+/* ---- Side rail (profile.html, admin.html) ----
+   .side-rail-aside/.side-rail/.side-nav-item are shared layout classes from
+   common.css (sticky offset, clamp()ed width, height cap) used by both pages -
+   retinted here at higher specificity rather than duplicated, so a future
+   layout tweak to the shared rule still reaches both. Not used inside the
+   shared auth modal, so a blanket .editorial-page scope is safe. */
+.editorial-page .side-rail {
+  background: rgb(var(--ed-surface-lowest));
+  border: 1px solid rgb(var(--ed-divider));
+  border-radius: 4px;
+}
+/* Full --ed-ink, not --ed-ink-soft: this rail's own primary navigation
+   (Trang chủ, Viết bài mới, Chỉnh sửa hồ sơ...), same reasoning as
+   .ed-nav-link/.ed-dropdown-item above. */
+.editorial-page .side-nav-item { color: rgb(var(--ed-ink)); }
+.editorial-page .side-nav-item:hover { background: rgb(var(--ed-surface-low)); color: rgb(var(--ed-ink)); }
+.editorial-page .side-nav-item.active {
+  background: rgb(var(--ed-surface-low));
+  color: rgb(var(--ed-ink));
+  font-weight: 600;
+}
+
+/* profile.html (#profile-main) and admin.html (#admin-app) both pair this
+   card with a content column via .side-rail-aside/.side-rail-content
+   (common.css) - side by side only from 1024px up (that pair's own
+   `@media (min-width: 1024px)`), stacked full-width below it. Below 1024px
+   this card used to render as a full-width block ABOVE the profile/admin
+   content - avatar, cover, bio, everything on profile.html; all seven admin
+   tabs on admin.html - so a phone OR TABLET visitor had to scroll past nine
+   (or seven) menu rows before reaching anything about the page they came
+   for. Every one of its rows is reachable another way below 1024px: the
+   site links (Trang chủ/Viết bài mới/Bảng quản trị) already live in the
+   hamburger menu and the header's own "Viết bài" button, and the panel/tab
+   switches (profile's person/manage_accounts/lock_reset/notifications/
+   schedule, admin's seven tabs + trash) were added to the header's avatar
+   dropdown for exactly this - see renderNavAuthState() in js/api.js, and
+   HASH_PANELS in profile.html / HASH_TABS in js/admin.js for the #hash each
+   one deep-links to. */
+@media (max-width: 1023px) {
+  #profile-main .side-rail-aside { display: none; }
+}
+@media (max-width: 1023px) {
+  #admin-app .side-rail-aside { display: none; }
+}
+/* The panel/tab switches above are the <1024px stand-in for the side rail
+   that display:none hides at this same width. At >=1024px the side rail is
+   back on screen, so showing them a second time in the dropdown would just
+   duplicate every link - hide this group there and keep only account-level
+   items (profile/write/admin/logout) in the desktop dropdown. */
+@media (min-width: 1024px) {
+  .ed-dropdown-mobile-only { display: none; }
+}
+
+/* ---- Form fields, reused across profile.html's panels ---- */
+.ed-input {
+  background: rgb(var(--ed-surface-low));
+  border: 1px solid rgb(var(--ed-divider));
+  border-radius: 4px;
+  color: rgb(var(--ed-ink));
+  transition: border-color 0.15s ease;
+}
+.ed-input::placeholder { color: rgb(var(--ed-ink-faint)); }
+.ed-input:focus { outline: none; border-color: rgb(var(--ed-ink)); }
+.ed-story-title--sm.ed-hoverable:hover { color: rgb(var(--ed-accent)); }
+.ed-btn-outline {
+  border: 1px solid rgb(var(--ed-divider));
+  color: rgb(var(--ed-ink));
+}
+.ed-btn-outline:hover { border-color: rgb(var(--ed-accent)); color: rgb(var(--ed-accent)); }
+.ed-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--ed-ink-faint));
+}
+
+/* Category tag - flat masthead-style text, not a coloured pill: no fill, no
+   radius, just tracked monospace with a generated "#" (the print convention
+   the brief asks for - "#KIẾNTRÚCHỆTHỐNG" - kept out of the stored data, same
+   reasoning as the pull-quote's quotation marks in common.css: toggling the
+   style never leaves a stray "#" for a copy-paste to carry along). Flat black/
+   white throughout now, like every other control on the page - no colour role
+   left for a tag to borrow the site's one accent for. */
+.ed-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgb(var(--ed-ink));
+}
+.ed-chip::before { content: '#'; }
+a.ed-chip:hover { text-decoration: underline; }
+/* On top of a photo: a small solid label, not a pill or a frosted pane - the
+   one place this chip still needs a fill at all, purely for legibility over
+   an arbitrary image. */
+.ed-chip--on-media {
+  background: rgb(var(--ed-bg) / 0.94);
+  color: rgb(var(--ed-ink));
+  padding: 0.2rem 0.5rem;
+}
+/* Homepage-only hover (feedback): a plain colour change, no underline - for
+   every tag chip on this page (the lead/rail's plain .ed-chip spans and the
+   on-media badges). Elsewhere .ed-chip keeps its own hover (a.ed-chip:hover's
+   underline above) - this is scoped to #home-main, not a global recolour of
+   the tag identity. */
+#home-main .ed-chip:hover {
+  color: rgb(202 138 4);
+  text-decoration: none;
+}
+/* The one place a chip carries the accent itself - a small kicker line, not a
+   badge shape (rounded corners removed, background dropped). */
+.ed-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgb(var(--ed-accent));
+}
+/* Same eyebrow type treatment, muted grey instead of the accent - the
+   homepage's "Danh mục:" row label reads as a plain field name (like
+   viewall.html's "Sắp xếp:"), not a section heading borrowing the brand
+   colour. */
+.ed-kicker--muted { color: rgb(var(--ed-ink-faint)); }
+
+.ed-byline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  color: rgb(var(--ed-ink-faint));
+}
+.ed-byline-name { color: rgb(var(--ed-ink)); font-weight: 600; }
+/* Square, not the round avatar every other site uses - matches .ed-photo's
+   own corner radius (the masonry feed's own picture tiles) rather than the
+   generic profile-picture circle, since this byline sits right next to a
+   grid of square-cornered photos on a blog whose whole point is the
+   pictures. Same class everywhere a byline appears (homepage lead, the
+   masonry cards, the article page itself) - one change here is every one of
+   them at once. */
+.ed-byline-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 4px;
+  object-fit: cover;
+  background: rgb(var(--ed-accent-soft));
+}
+.ed-byline-dot { opacity: 0.6; }
+/* A bit fainter still, on the homepage only (feedback: these read a touch
+   heavier than the rest of the redesign's muted text) - the lead's byline
+   meta and the "Đọc nhiều nhất" rail's 01/02 rank numbers, both already
+   ed-ink-faint. NOT .ed-kicker--muted - the "Danh mục:" label was called out
+   to stay at full strength. */
+#home-main .ed-byline,
+#home-main .ed-icon-faint {
+  opacity: 0.75;
+}
+
+.ed-hero-title {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 550;
+  font-size: clamp(2rem, 4.6vw, 3.375rem);
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+  color: rgb(var(--ed-ink));
+}
+/* Hand-written rather than Tailwind's gap-x-4/gap-y-1/mb-3 utilities: the
+   CDN compiler that would generate a class on demand is broken on this
+   mount (see the note on that constraint elsewhere in this file), so only
+   classes some EARLIER build happened to already need exist in
+   css/tailwind.css - gap-x-4 was never one of them, and came out as a
+   silent no-op that read as "Hà Nội" and the phone number running straight
+   into each other with no space at all. Explicit CSS here cannot go missing
+   the same way. */
+#profile-email { margin-bottom: 0.5rem; }
+.profile-meta-row {
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+.ed-dek {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: rgb(var(--ed-ink-soft));
+  max-width: 46rem;
+}
+/* The article standfirst: sits between the headline and the cover as the
+   article's own lead sentence. Same body family as #post-content
+   .prose-content (Inter, not the serif Newsreader the reference's
+   "title-editorial" used) - the standfirst is the article's own opening
+   line, so it reads as part of the same body of text rather than as a
+   second typeface bridging the serif headline and the sans article.
+   Full --ed-ink, not --ed-ink-soft: same reasoning as .prose-content and
+   the nav/dropdown text elsewhere in this file - this is the thing that
+   matters, not secondary text beside it. */
+.ed-standfirst {
+  font-family: 'Inter', sans-serif;
+  font-style: italic;
+  /* 500, not the 450 this carried under Newsreader: that family is
+     self-hosted as a true variable-weight range (400-600, see the
+     @font-face in this file), so 450 was a real drawn weight. Inter is
+     self-hosted as discrete static faces (css/fonts.css: 400/500/600/700
+     only, per scripts/fetch-fonts.py) - 450 has no face to resolve to, so
+     this steps to the nearest one that exists rather than leaving the
+     browser to guess. */
+  font-weight: 500;
+  font-size: 1.1875rem;
+  line-height: 1.55;
+  color: rgb(var(--ed-ink));
+}
+.ed-section-title {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 600;
+  font-size: 1.625rem;
+  line-height: 1.2;
+  color: rgb(var(--ed-ink));
+}
+.ed-story-title {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(1.375rem, 2.4vw, 1.875rem);
+  line-height: 1.18;
+  color: rgb(var(--ed-ink));
+}
+.ed-story-title--sm {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 600;
+  font-size: 1.1875rem;
+  line-height: 1.3;
+  color: rgb(var(--ed-ink));
+}
+.group:hover .ed-story-title,
+.group:hover .ed-story-title--sm { color: rgb(var(--ed-accent)); }
+
+/* Full --ed-ink, not --ed-ink-soft: the excerpt is the card's own preview of
+   the article, same reasoning as #post-content .prose-content and the nav/
+   dropdown text elsewhere in this file - it reads as the thing the reader is
+   deciding whether to click into, not as secondary text beside the title. */
+.ed-excerpt {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: rgb(var(--ed-ink));
+}
+
+/* ---- Chrome: nav, search, footer ---- */
+.ed-nav {
+  background: rgb(var(--ed-bg) / 0.97);
+  border-bottom: 1px solid rgb(var(--ed-ink) / 0.1);
+}
+/* The header's left-hand group (hamburger + wordmark, plus .ed-nav-links -
+   display:none below 768px, so not actually in this row on mobile). gap-6
+   was sized for hamburger/wordmark/nav-links all sharing one row on
+   desktop; with the links gone, that same gap just reads as the logo
+   sitting oddly far from the menu icon it's paired with. Tighter on mobile
+   only - the class is a plain Tailwind combo, so scoped through .ed-nav
+   rather than adding an id no other rule needs. */
+@media (max-width: 767px) {
+  .ed-nav .flex.items-center.gap-6 { gap: 0.5rem; }
+}
+.ed-search {
+  background: rgb(var(--ed-surface-lowest));
+  border: 1px solid rgb(var(--ed-divider));
+  border-radius: 3px;
+  color: rgb(var(--ed-ink));
+  transition: border-color 0.15s ease;
+}
+.ed-search::placeholder { color: rgb(var(--ed-ink-faint)); }
+.ed-search:focus { outline: none; border-color: rgb(var(--ed-ink)); }
+.ed-icon-btn {
+  color: rgb(var(--ed-ink-soft));
+  border-radius: 3px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.ed-icon-btn:hover { color: rgb(var(--ed-accent)); background: rgb(var(--ed-ink) / 0.06); }
+/* Square, not a circle - the one place this nav used a fully-round shape,
+   which read as a different affordance language from every chip/card/button
+   beside it (all 3-6px corners). Sized to match .ed-search/.ed-nav-write, so
+   the whole right-hand icon row sits on one shared height. */
+.ed-avatar-btn {
+  background: rgb(var(--ed-primary));
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 6px;
+}
+.ed-avatar-btn .material-symbols-outlined,
+.ed-avatar-btn .ed-icon-soft { color: rgb(var(--ed-on-primary)); }
+.ed-search-overlay {
+  background: rgb(var(--ed-bg));
+  border-bottom: 1px solid rgb(var(--ed-ink) / 0.1);
+}
+.ed-icon-faint { color: rgb(var(--ed-ink-faint)); }
+.ed-icon-soft { color: rgb(var(--ed-ink-soft)); }
+/* The one floating menu in the nav (avatar click): a card like every other
+   panel, but OVER page content rather than in the normal flow, so it needs
+   two things a panel sitting in the page doesn't - a shadow to read as
+   lifted, and overflow:hidden so a row's hover tint (NAV_ITEM_CLASS in
+   js/api.js, a bare background colour with no radius of its own) is clipped
+   to the panel's own rounded corners instead of squaring them off. The open/
+   close is a plain hidden-class toggle (toggleNavDropdown() in js/api.js), so
+   the animation is unconditional here rather than triggered from JS: a CSS
+   animation restarts on its own every time an element goes from
+   display:none back to visible, which is exactly the moment this needs to
+   play. */
+.ed-dropdown-panel {
+  background: rgb(var(--ed-surface-lowest));
+  border: 1px solid rgb(var(--ed-divider));
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgb(var(--ed-ink) / 0.1);
+  animation: ed-dropdown-in 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* #user-dropdown-menu (common.css, "Account dropdown") still sets its own
+   background/border/backdrop-filter from --menu-surface/--menu-border - an ID
+   rule, so it silently outranks the class above regardless of load order (the
+   same #nav-brand-shaped bug found earlier in this redesign). Those two
+   variables were never part of editorial.css's --c- or --glass- aliasing, so
+   they still carry the old theme's OWN dark value (a navy glass panel,
+   indigo border) rather than this file's flat night surface - invisible in
+   light mode by coincidence (old --menu-surface there is plain white, close
+   enough to --ed-surface-lowest to look right), obvious in dark mode where
+   the two palettes actually differ. Neutralised the same way as #nav-brand:
+   an .editorial-page-scoped override, not a rewrite at the source. */
+.editorial-page #user-dropdown-menu {
+  background: rgb(var(--ed-surface-lowest));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: rgb(var(--ed-divider));
+  box-shadow: 0 12px 32px rgb(var(--ed-ink) / 0.1);
+}
+@keyframes ed-dropdown-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ed-dropdown-panel { animation: none; }
+}
+/* Dropdown CONTENT (js/api.js renderNavAuthState()) - was still on the old
+   Material tokens (on-background/outline-variant/electric-indigo/text-error)
+   from before this redesign, unlike the panel shell above. Rows echo
+   .side-nav-item's colours (profile.html's side rail - the same "account
+   menu" concept elsewhere) but stay plain rectangles: no left border/
+   asymmetric radius, since that shape is for sitting flush in the rail card,
+   and .ed-dropdown-panel already owns this panel's rounding+clipping. */
+.ed-dropdown-header { border-bottom: 1px solid rgb(var(--ed-divider)); }
+.ed-dropdown-name { color: rgb(var(--ed-ink)); font-weight: 600; }
+.ed-dropdown-email { color: rgb(var(--ed-ink-faint)); }
+.ed-dropdown-avatar {
+  border-radius: 6px;
+  background: rgb(var(--ed-accent-soft));
+  color: rgb(var(--ed-accent));
+}
+/* Full --ed-ink, not --ed-ink-soft: these rows are the menu's own primary
+   content (Trang cá nhân, Bảng quản trị, Đăng xuất...), not secondary text
+   beside something else - same reasoning as .ed-nav-link above and
+   #post-content .prose-content elsewhere in this file. Hover still has
+   .ed-surface-low to mark itself with, so the colour staying put there is
+   not a lost affordance. */
+.ed-dropdown-item { color: rgb(var(--ed-ink)); }
+.ed-dropdown-item:hover {
+  background: rgb(var(--ed-surface-low));
+  color: rgb(var(--ed-ink));
+}
+.ed-dropdown-item--accent { color: rgb(var(--ed-accent)); }
+.ed-dropdown-item--accent:hover { color: rgb(var(--ed-accent)); }
+.ed-dropdown-divider { border-top: 1px solid rgb(var(--ed-divider)); }
+
+/* ---- "Giao diện" picker (js/api.js themePickerHtml()) ----
+   Sáng > Tối > Đọc ban đêm as three plain options at the top of the account
+   menu - the only theme control on the site. No track, no frame, no filled
+   block: the picked option is marked by its ICON alone, which fills solid in
+   the accent (the glyphs are outlines at rest), plus a bolder label. Icon over
+   label, so "Đọc ban đêm" fits a third of the menu without truncating. */
+.editorial-page #user-dropdown-menu { width: 16rem; }
+.ed-theme-picker-label {
+  margin: 0 0 0.375rem 0.25rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--ed-ink-faint));
+}
+.ed-theme-seg {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+}
+.ed-theme-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 3.25rem;
+  padding: 0.45rem 0.25rem;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: rgb(var(--ed-ink-soft));
+  transition: color 0.15s ease;
+}
+.ed-theme-opt svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  fill: none;
+  transition: fill 0.15s ease, color 0.15s ease;
+}
+.ed-theme-opt:hover { color: rgb(var(--ed-ink)); }
+.ed-theme-opt:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.ed-theme-opt.is-active {
+  color: rgb(var(--ed-ink));
+  font-weight: 600;
+}
+.ed-theme-opt.is-active svg {
+  color: rgb(var(--ed-accent));
+  fill: currentColor;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ed-theme-opt,
+  .ed-theme-opt svg { transition: none; }
+}
+/* profile.html / admin.html: the menu's account rows duplicate the side rail
+   that is on screen from 1024px up (toggleNavDropdown() in js/api.js). */
+@media (min-width: 1024px) {
+  .ed-dropdown-rail-dup { display: none; }
+}
+
+/* ---- Auth modal (js/api.js injectAuthModal()) ----
+   A direct child of <body>, same as everything else, so .editorial-page
+   reaches it on every page that opens it. The markup keeps its old class
+   names (.auth-card/.auth-input/.auth-submit/.auth-field) - only the visual
+   properties are overridden here, same approach as .glass-panel above: a
+   frosted, gradient-pill dialog (blur(24px) saturate(180%), a rounded-full
+   CTA on --brand-gradient, an indigo-tinted --modal-shadow rim) reskinned
+   into the flat bordered-card language the rest of the site now uses. The
+   two decorative blurred glow blobs and the pulsing-dot brand pill had no
+   CSS hook to flatten, so those were removed from the markup itself instead
+   (js/api.js), not overridden here. */
+.editorial-page #auth-modal .auth-card {
+  background: rgb(var(--ed-surface-lowest));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgb(var(--ed-divider));
+  border-radius: 6px;
+  box-shadow: 0 20px 48px rgb(var(--ed-ink) / 0.12);
+}
+.editorial-page #auth-modal .auth-input {
+  border-radius: 4px;
+  background: rgb(var(--ed-surface-low));
+  border-color: rgb(var(--ed-divider));
+}
+.editorial-page #auth-modal .auth-input:focus {
+  border-color: rgb(var(--ed-ink));
+  box-shadow: none;
+}
+.editorial-page #auth-modal .auth-field:focus-within > .material-symbols-outlined {
+  color: rgb(var(--ed-accent));
+}
+/* The pill CTA, flattened to the site's one button shape - same radius and
+   weight as .ed-btn-primary, rather than switching the markup to that class
+   outright (the auth flow's JS toggles :disabled/opacity on .auth-submit by
+   name in a few places, so the class stays). */
+.editorial-page #auth-modal .auth-submit {
+  border-radius: 3px;
+  background: rgb(var(--ed-primary));
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  box-shadow: none;
+}
+.editorial-page #auth-modal .auth-submit:hover {
+  background: rgb(var(--ed-accent));
+  box-shadow: none;
+}
+
+.ed-footer {
+  border-top: 1px solid rgb(var(--ed-ink) / 0.1);
+  color: rgb(var(--ed-ink-faint));
+}
+.ed-footer a:hover { color: rgb(var(--ed-accent)); }
+
+/* ---- Buttons ---- */
+.ed-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgb(var(--ed-primary));
+  color: rgb(var(--ed-on-primary));
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding: 0.7rem 1.35rem;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+}
+.ed-btn-primary:hover { background: rgb(var(--ed-accent)); }
+/* Compact variant for the "Viết bài" pill in .ed-nav - the base padding/icon
+   size above is tuned for a full-width CTA (the hero's "Đọc bài viết"), too
+   heavy next to a 16px-tall nav row. Icon size is set here (hand-authored
+   CSS) rather than an inline text-[14px] utility class, since the Tailwind
+   build on this server only ever compiled a fixed set of arbitrary values
+   and 14px isn't one of them.
+   font-size is set here too, for a less obvious reason: the markup ALSO
+   carries an inline text-[12px] class, which should have won this outright,
+   but editorial.css loads after tailwind.css, so .ed-btn-primary's own
+   font-size (0.9375rem, further down this same file) wins the cascade at
+   equal specificity by SOURCE ORDER - the button was rendering at 15px, not
+   12px, the whole time. Setting it again here, later in the file than
+   .ed-btn-primary, is what actually wins.
+   height is explicit and matched to .ed-search's own rendered height
+   (measured: 33.6px, padding+border+its 14px line included) so the two
+   sit exactly flush - the padding/gap above was never tuned against the
+   search field one row over. */
+.ed-nav-write {
+  gap: 0.3rem;
+  padding: 0 0.75rem;
+  height: 2.1rem;
+  font-size: 0.75rem;
+}
+.ed-nav-write .material-symbols-outlined { font-size: 14px; }
+/* No solid fill in either theme - a bordered button instead, so it reads as
+   a companion to the search field beside it rather than one heavy filled
+   shape in the row. Only border/text colour change between themes, both
+   already theme-aware tokens (--ed-divider/--ed-ink flip with .dark
+   automatically), so one rule covers both. */
+.ed-nav-write {
+  background: transparent;
+  border: 1px solid rgb(var(--ed-divider));
+  color: rgb(var(--ed-ink));
+}
+.ed-nav-write:hover {
+  background: transparent;
+  border-color: rgb(var(--ed-accent));
+  color: rgb(var(--ed-accent));
+}
+/* Icon-only below 420px: the header row's right-hand group (search icon,
+   this button, avatar) measured wider than the nav bar itself on a real
+   narrow phone (~360-390px) once the left group (hamburger + wordmark) is
+   added in - content genuinely didn't fit, not merely tight, which is what
+   read as "the Viết bài icon is broken": overflow past the edge, clipped by
+   the page's overflow-x-hidden, made the button (and whatever sat past it)
+   look cut off or squeezed into the avatar next to it.
+   font-size:0 rather than hiding a span: the label is a bare text node
+   after the icon (no wrapping element in the markup, on any of the 5 pages
+   that carry this button), so it has no font-size of its own to override
+   and simply inherits this to invisible - the icon keeps its own explicit
+   font-size below and is unaffected. */
+@media (max-width: 420px) {
+  .ed-nav-write {
+    font-size: 0;
+    gap: 0;
+    padding: 0 0.55rem;
+  }
+  .ed-nav-write .material-symbols-outlined { font-size: 18px; }
+}
+/* Icon-only again from 768 to 1023px (iPad portrait and similar tablets) -
+   a second, narrower band than the phone one above, for a different
+   reason: shrinking the header search box to its icon (above) fixed the
+   header spilling past its own right edge at 768px, but with every nav
+   label then allowed to wrap (the default - nothing before this set
+   white-space on .ed-nav-link) the *labels* were still wrapping to two
+   lines inside their own now-too-narrow slots instead of overflowing,
+   which read just as broken. Confirmed by measuring both at once: forcing
+   every label to one line here reproduces the original ~26px overflow,
+   so nowrap alone is not the fix - the write button needs to give the
+   labels that room. 1024px+ (real desktop) has space for all of it at
+   full size, so this closes at the same breakpoint the search box
+   reopens at. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .ed-nav-write {
+    font-size: 0;
+    gap: 0;
+    padding: 0 0.55rem;
+  }
+  .ed-nav-write .material-symbols-outlined { font-size: 18px; }
+}
+.ed-btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: rgb(var(--ed-ink));
+  text-underline-offset: 3px;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--ed-ink) / 0.35);
+}
+.ed-btn-text:hover { color: rgb(var(--ed-accent)); text-decoration-color: rgb(var(--ed-accent)); }
+.ed-link-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: rgb(var(--ed-ink-soft));
+}
+.ed-link-arrow:hover { color: rgb(var(--ed-accent)); }
+.ed-link-arrow::after { content: '\2192'; transition: transform 0.15s ease; }
+.ed-link-arrow:hover::after { transform: translateX(2px); }
+
+/* ---- Panels: flat surface tiers, not glass ----
+   A hairline border is what makes a flat panel read as a bounded CARD instead
+   of just a slightly different fill next to the page background - the one
+   thing missing before this redesign, since --ed-surface-lowest (white) sits
+   only a few % lighter than --ed-bg (warm paper) and was doing all the work
+   alone. */
+.ed-panel {
+  background: rgb(var(--ed-surface-lowest));
+  border: 1px solid rgb(var(--ed-divider));
+  border-radius: 4px;
+}
+.ed-panel--low {
+  background: rgb(var(--ed-surface-low));
+  border: 1px solid rgb(var(--ed-divider));
+  border-radius: 4px;
+}
+
+/* ---- Kill the remaining glassmorphism on write.html/admin.html ----
+   Both still lean on common.css's .glass-panel/.glass-card (backdrop-filter:
+   blur(12px), the --c-glass-surface/--c-glass-border pair the alias above
+   already flattens to a near-opaque paper tone) rather than the native .ed-*
+   classes above - see editorial.css's own header comment on why (hundreds of
+   components, reskinned by alias rather than rewritten one at a time). The
+   alias makes the pane ~98% opaque already, so blur(12px) behind it is dead
+   code paying a paint cost for zero visible effect - removed outright rather
+   than left inert. */
+.editorial-page .glass-panel,
+.editorial-page .glass-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* Radius: write.html's editor sidebar cards (.rounded-2xl, 16px) and most of
+   admin.html's panels/tables/modals (.rounded-xl, 12px) both round well past
+   the 4-6px the brief asks for. Targeted by compound class (the exact pair
+   every one of these was written with - grep "glass-(panel|card) rounded-"
+   across both files) rather than editing every element in admin.html's
+   1300+-line inline <style> or write.html's markup by hand. */
+.editorial-page .glass-card.rounded-xl,
+.editorial-page .glass-panel.rounded-xl,
+.editorial-page .glass-panel.rounded-2xl,
+.editorial-page .glass-card.rounded-2xl {
+  border-radius: 6px;
+}
+/* write.html's actual content cards - one .rt-block per paragraph/heading/
+   image/code block, the thing an author looks at more than any sidebar panel
+   on the page. Its own rule (write.css) draws it from the SAME wash/inset
+   tokens .overview-card used (--glass-wash-1/2, --glass-inset), already
+   flattened to transparent above - which left it with no fill at all, just a
+   border floating on the canvas card behind it. Given an explicit surface
+   here instead of relying on the now-empty gradient, one step recessed from
+   the white canvas so a block still reads as its own object while editing.
+   Radius matches every other card on the site (was 1rem/16px). */
+.editorial-page .rt-block {
+  background: rgb(var(--ed-surface-low));
+  border-radius: 6px;
+}
+/* admin.html's stat cards: the hover state (its own inline <style>, "Overview
+   tab") adds a THIRD, coloured shadow layer - a glow, not a lift - and tints
+   the border to match. Overridden here at higher specificity (two classes vs
+   admin.html's one) rather than edited in place, same reasoning as the glass-
+   wash flatten above. The lift itself (1px up) stays; only the colour-glow
+   goes. */
+.editorial-page .stat-card:hover {
+  border-color: rgb(var(--ed-ink) / 0.25);
+  box-shadow: 0 6px 16px rgb(var(--ed-ink) / 0.1);
+  transform: translateY(-1px);
+}
+
+/* ---- Hero & story layout (homepage) ---- */
+.ed-hero { border-bottom: 1px solid rgb(var(--ed-ink) / 0.1); }
+.ed-hero-media, .ed-lead-media {
+  background: rgb(var(--ed-surface-high));
+  border-radius: 4px;
+  overflow: hidden;
+}
+/* 1200 x 630 (reduced to 40/21) - the standard og:image/social-share size,
+   not the old 16/10: the SAME cover file is what a Facebook/Zalo/Twitter
+   share card renders (ogImageUrl() in render-html.js reuses the on-site
+   derivative, there is no separate crop for social), so the on-site display
+   ratio and the share-card ratio need to match or one of the two always
+   loses part of the picture to a mismatched crop. write.js's cover-upload
+   cropper (COVER_CROP_RATIO) is locked to this same ratio for exactly that
+   reason. */
+.ed-lead-media { aspect-ratio: 40 / 21; }
+.ed-rule { border-top: 1px solid rgb(var(--ed-ink) / 0.1); }
+.ed-section-head { border-bottom: 1px solid rgb(var(--ed-ink) / 0.1); }
+
+.ed-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+}
+@media (min-width: 768px) {
+  .ed-grid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+  .ed-grid.ed-grid--single { grid-template-columns: 1fr; }
+}
+.ed-story-list > .ed-story-item + .ed-story-item {
+  border-top: 1px solid rgb(var(--ed-ink) / 0.1);
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+}
+.ed-empty { color: rgb(var(--ed-ink-faint)); font-family: 'Inter', sans-serif; }
+.ed-empty a { color: rgb(var(--ed-accent)); text-decoration: underline; }
+
+/* ---- Post card feed ---- */
+/* Post cards (home "Bài viết mới nhất" #more-grid, viewall #viewall-grid).
+   A real grid, not column-count masonry: every card the same size and every
+   row lined up (feedback 2026-10-04 - the masonry feed, each photo at its own
+   ratio, read as ragged). grid-auto-rows: 1fr makes every row as tall as the
+   tallest card, so cards match across rows too, not only within one. The
+   class keeps its old name so home.js / viewall.js / ssr-content.js markup
+   needs no change. */
+.ed-masonry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 640px) {
+  .ed-masonry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .ed-masonry { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* The card fills its cell; the text half grows so the hashtag row can sit on
+   the bottom edge of every card. */
+.ed-masonry > .ed-panel { height: 100%; }
+/* Title and excerpt reserve their full clamp (2 and 3 lines) even when the
+   text is shorter, so the excerpt and the meta line start at the same height
+   in every card of a row. */
+.ed-masonry .ed-story-title--sm { min-height: calc(2 * 1lh); }
+.ed-masonry .ed-excerpt { min-height: calc(3 * 1lh); }
+.ed-masonry .ed-panel .flex-grow > .mt-md:last-child { margin-top: auto; padding-top: 1rem; }
+.ed-masonry .ed-panel .flex-grow > .ed-byline.mt-auto { margin-top: auto; }
+/* Same frame for every cover: 4:3, cropped to fill. A portrait phone shot
+   loses its top and bottom here - the whole picture is one click away. */
+.ed-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  object-fit: cover;
+  border-radius: 4px 4px 0 0;
+  background: rgb(var(--ed-surface-high));
+}
+
+/* ---- Photo album (post body: several "+ Ảnh" blocks back to back) ----
+   renderContentBlocksHtml() (js/api.js) groups any RUN of 2+ consecutive
+   image blocks into one of these instead of stacking each as its own
+   full-width figure - the difference between a 20-photo post reading as one
+   long scroll and reading as a browsable album. Same column-count technique
+   as .ed-masonry above (native aspect ratio, no crop), just narrower typical
+   tiles since there is no card chrome around each photo here. Every <img>
+   inside is already a lightbox target - prepareArticleImages() in post.js
+   walks every #post-body img with no gallery-specific code of its own. */
+.ed-gallery {
+  column-count: 2;
+  column-gap: 0.5rem;
+}
+@media (min-width: 640px) {
+  .ed-gallery { column-count: 3; }
+}
+@media (min-width: 1024px) {
+  .ed-gallery { column-count: 4; }
+}
+.ed-gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+  break-inside: avoid;
+  cursor: zoom-in;
+}
+
+/* ---- Article page ---- */
+.ed-progress-track { background: rgb(var(--ed-divider)); }
+.ed-progress-bar { background: rgb(var(--ed-accent)); }
+
+.ed-article-header { border: none; }
+.ed-cover {
+  background: rgb(var(--ed-surface-high));
+  border-radius: 4px;
+  overflow: hidden;
+  /* Was Tailwind's aspect-video (16/9) on the markup itself - moved here as
+     40/21 (1200x630) to match .ed-lead-media above, see that rule's own
+     comment for why the two have to agree. */
+  aspect-ratio: 40 / 21;
+}
+.ed-byline-strip {
+  background: rgb(var(--ed-surface-low));
+  border-radius: 4px;
+  padding: 1rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8125rem;
+  color: rgb(var(--ed-ink-faint));
+}
+.ed-byline-strip #post-author-link { color: rgb(var(--ed-ink)); font-weight: 600; }
+.ed-byline-strip #post-author-link:hover { color: rgb(var(--ed-accent)); }
+.ed-byline-strip .bg-outline-variant { background-color: rgb(var(--ed-divider)); }
+.ed-byline-strip .material-symbols-outlined { color: rgb(var(--ed-ink-faint)); }
+
+/* Retint the shared .reaction-btn / .tap-target / .related-card / .prose-content
+   components (common.css) for this page only, at higher specificity than
+   their own single-class rule. */
+#post-content .reaction-btn { color: rgb(var(--ed-ink-soft)); font-family: 'Inter', sans-serif; }
+#post-content .reaction-btn:hover,
+#post-content .reaction-btn[aria-pressed='true'] { color: rgb(var(--ed-accent)); }
+#post-content .reaction-btn:focus-visible { outline-color: rgb(var(--ed-accent)); }
+#post-content .ed-action-bar {
+  background: rgb(var(--ed-surface-low));
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+}
+
+#post-content .related-card:hover { background: rgb(var(--ed-surface)); }
+#post-content .related-card:focus-visible { outline-color: rgb(var(--ed-accent)); }
+#post-content .related-thumb { background: rgb(var(--ed-surface-high)); }
+#post-content .related-title { color: rgb(var(--ed-ink)); font-family: 'Inter', sans-serif; }
+#post-content .related-card:hover .related-title { color: rgb(var(--ed-accent)); }
+#post-content #related-title { border-bottom-color: rgb(var(--ed-ink) / 0.1); font-family: 'Newsreader', Georgia, serif; font-weight: 600; }
+
+/* The article body: headings back to the display serif, links to the one
+   accent, quotations already read as pull-quotes in common.css - just retint
+   them - and a real monospace + card treatment for <pre>/<code>, the one
+   place JetBrains Mono is used for real (not decorative) content.
+   Full --ed-ink here, not the softer --ed-ink-soft most other body copy on
+   this page uses (reaction buttons, meta text): those are secondary text
+   sitting beside the thing that matters, so a step down from the headline
+   colour reads as hierarchy. The article's own paragraphs ARE the thing that
+   matters - softening them the same way just made the reading column look
+   faint against the page background instead. Reference: nashub.vn's own
+   article body sets its paragraphs in the same full text colour its
+   headings use (--color-text, not --color-text-secondary) for exactly this
+   reason. */
+#post-content .prose-content { color: rgb(var(--ed-ink)); font-family: 'Inter', sans-serif; }
+#post-content .prose-content h1,
+#post-content .prose-content h2,
+#post-content .prose-content h3,
+#post-content .prose-content h4 {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 600;
+  color: rgb(var(--ed-ink));
+}
+/* Sizes an author-written h2/h3 (the only two levels the "Cấp tiêu đề" menu
+   in write.js offers - see headingFormat there) never had of their own:
+   Tailwind's Preflight resets every heading to font-size:inherit, and
+   nothing in this file or common.css gave them one back, so they were
+   rendering at the SAME size as the body paragraph around them - serif,
+   bold and recoloured, but not actually BIGGER. h1/h4 are not reachable from
+   the editor, but get a size anyway rather than silently inheriting body
+   size if pasted content or a future menu entry ever produces one. */
+#post-content .prose-content h1 { font-size: 1.75rem; }
+#post-content .prose-content h2 { font-size: 1.5rem; }
+#post-content .prose-content h3 { font-size: 1.25rem; }
+#post-content .prose-content h4 { font-size: 1.125rem; }
+#post-content .prose-content a { color: rgb(var(--ed-accent)); }
+#post-content .prose-content a:hover { color: rgb(var(--ed-ink)); }
+#post-content .prose-content blockquote {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+  color: rgb(var(--ed-ink));
+}
+#post-content .prose-content pre,
+#post-content .prose-content code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+#post-content .prose-content pre {
+  background: rgb(var(--ed-primary-container));
+  /* Literal white, not --ed-accent-soft: that token is a BACKGROUND role (a
+     pale chip fill in light mode, a dark navy one in dark mode - see its own
+     definition further up), not a foreground one, and reads fine as text only
+     by coincidence in light mode (its light-mode value happens to be pale).
+     In dark mode the same token is dark-on-dark and unreadable - the exact
+     bug .rt-code below was built with too until this pass. The card itself
+     is unconditionally dark in EITHER theme (--ed-primary-container is a
+     "code note" variant near-black in both), so a literal light colour is
+     always readable against it, in a way no theme token pair here is. */
+  color: rgb(255 255 255 / 0.9);
+  border: 1px solid rgb(var(--ed-ink) / 0.12);
+  padding: 1rem 1.25rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+#post-content .prose-content :not(pre) > code {
+  background: rgb(var(--ed-surface));
+  color: rgb(var(--ed-ink));
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.875em;
+}
+/* "Chèn khối lệnh" (write.js RT_TOOLBAR, rtInsertCodeBlock()) - the labelled,
+   copy-button terminal block a security/infra post leans on constantly (see
+   that function's own comment).
+   No fill, border only, in EITHER theme - unlike the plain <pre> above (an
+   unrelated, older element left as its own "always dark" card): a reader
+   pointed out that filling the whole frame added a rectangle with nothing to
+   frame, on top of a page background that already reads as one continuous
+   surface either theme.
+   Text is --ed-ink, the page's own body colour, not a literal white overlay
+   (an earlier pass here used one, reasoning that the card was unconditionally
+   dark - it no longer is): the SAME reason fixes the actual bug this pass was
+   made for. .editorial-page ::selection (this file, near the top) sets
+   `color: rgb(var(--ed-ink))` on every text selection on the page - a literal
+   white here fought that rule the moment a reader dragged over the command to
+   copy it by hand, and the browser's own selection colour underneath (the
+   rust-tinted accent) plus that forced dark ink together read as
+   near-illegible dark-on-dark, exactly the shape of bug this whole pass keeps
+   finding. --ed-ink is already what ::selection sets, so selecting this text
+   now changes NOTHING about its colour - only the background tints, same as
+   selecting any other paragraph on the page.
+   Two scopes, not one: #post-content .prose-content is the published article
+   (post.html), .rt-editor is write.html's own live editing surface - neither
+   loads the other's stylesheet scope, and unlike blockquote/pre above there
+   is no existing base rule for either to inherit from, so both are written
+   out in full here rather than assuming one cascades into the other.
+   The "Sao chép" button is built by post.js's wireCodeBlocks() at render
+   time, not stored markup - see rtInsertCodeBlock()'s own comment in
+   write.js for why, and .rt-code-copy-btn below for its own styling. */
+#post-content .prose-content .rt-code,
+.rt-editor .rt-code {
+  margin: 1.25rem 0;
+  border-radius: 6px;
+  border: 1px solid rgb(var(--ed-divider));
+}
+#post-content .prose-content .rt-code-lang,
+.rt-editor .rt-code-lang {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid rgb(var(--ed-divider));
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: rgb(var(--ed-ink-faint));
+}
+/* The terminal glyph post.js's wireCodeBlocks() puts ahead of the author's
+   own label text - post-page only, like .rt-code-copy-btn beside it, so no
+   .rt-editor half here (write.html never builds this wrapper). */
+#post-content .prose-content .rt-code-lang-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+#post-content .prose-content .rt-code-lang-label .material-symbols-outlined {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+#post-content .prose-content .rt-code-body,
+.rt-editor .rt-code-body {
+  /* This IS a <pre>, so it also matches the plain #post-content
+     .prose-content pre rule above (an unrelated, older "always dark card"
+     element) - background/border/border-radius are reset here to cancel
+     that rule's own values, which otherwise painted a second, inner dark box
+     underneath .rt-code's own border - the one property this block sets
+     that the generic rule also sets and this one does not override
+     (padding) is a harmless coincidence, same value either way. */
+  background: none;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgb(var(--ed-ink));
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+#post-content .prose-content .rt-code-body code,
+.rt-editor .rt-code-body code {
+  font-family: inherit;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+/* The copy button itself - --ed-* tokens now, matching .rt-code's own move
+   away from literal white overlays above (the card they were written for,
+   unconditionally dark, no longer exists). Post-page only (post.js's
+   wireCodeBlocks()), but declared here beside the rest of .rt-code rather
+   than split across two files. */
+.rt-code-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  padding: 0.25rem 0.625rem;
+  border-radius: 4px;
+  border: 1px solid rgb(var(--ed-divider));
+  background: none;
+  color: rgb(var(--ed-ink-soft));
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.rt-code-copy-btn:hover { background: rgb(var(--ed-surface)); color: rgb(var(--ed-ink)); }
+.rt-code-copy-btn .material-symbols-outlined { font-size: 15px; }
+
+#post-content #comment-input,
+.editorial-page textarea.ed-textarea {
+  background: rgb(var(--ed-surface-low));
+  border: 1px solid rgb(var(--ed-divider));
+}
+#post-content #comment-input:focus {
+  border-color: rgb(var(--ed-ink));
+  box-shadow: none;
+}
+#post-content #comment-submit {
+  background: rgb(var(--ed-primary));
+  color: rgb(var(--ed-on-primary));
+}
+#post-content #comment-submit:hover { background: rgb(var(--ed-accent)); }
+/* ---- Table of contents (post.html) ----
+   Built for real by post.js from the article's own h1/h2/h3 (buildToc()) -
+   not the reference mockup's static list of five invented section titles.
+   scroll-margin-top on the headings is what makes both a TOC click and a
+   direct #hash link land the heading BELOW the fixed nav instead of half
+   under it; native anchor scrolling reads this without any JS of its own. */
+#post-content .prose-content h1,
+#post-content .prose-content h2,
+#post-content .prose-content h3 {
+  scroll-margin-top: 6rem;
+}
+.ed-toc-link {
+  display: block;
+  padding: 0.375rem 0 0.375rem 0.75rem;
+  border-left: 2px solid rgb(var(--ed-divider));
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgb(var(--ed-ink-soft));
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.ed-toc-link:hover { color: rgb(var(--ed-ink)); }
+.ed-toc-link.is-active {
+  border-left-color: rgb(var(--ed-accent));
+  color: rgb(var(--ed-accent));
+  font-weight: 600;
+}
+.ed-toc-link--h3 { padding-left: 1.5rem; font-size: 0.75rem; }
+
+/* ---- Recent activity (profile.html "Hoạt động gần đây") ---- */
+.activity-item {
+  display: flex;
+  padding: 0.75rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-radius: 4px;
+  border-bottom: 1px solid rgb(var(--ed-divider));
+  transition: background-color 0.15s ease;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-item:hover { background: rgb(var(--ed-surface-low)); }
+.activity-item strong { color: rgb(var(--ed-ink)); font-weight: 600; }
+
+/* ---- Post-status tabs (profile.html "Bài viết của tôi") ---- */
+.ed-post-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 3px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: rgb(var(--ed-ink-soft));
+  background: rgb(var(--ed-surface-low));
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.ed-post-tab:hover { color: rgb(var(--ed-ink)); }
+.ed-post-tab.is-active { background: rgb(var(--ed-primary)); color: rgb(var(--ed-on-primary)); }
+.ed-post-tab-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6875rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgb(var(--ed-ink) / 0.12);
+}
+.ed-post-tab.is-active .ed-post-tab-count { background: rgb(var(--ed-on-primary) / 0.2); }
+
+/* ---- Dashboard stat numbers (admin.html overview cards) ----
+   The one place JetBrains Mono earns its "tabular data" role for real: a
+   count that changes every time a post is viewed reads better in a face built
+   for figures to line up in, not the serif headline font every other number
+   on the page is not. */
+.ed-stat-number {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--ed-ink));
+}
+
+.ed-comment-item { background: rgb(var(--ed-surface-low)); border-radius: 4px; }
+.ed-comment-avatar {
+  background: rgb(var(--ed-accent-soft));
+  color: rgb(var(--ed-on-accent-soft));
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+}
+
+/* ---- Compatibility retint for the comment tree ----
+   renderCommentBodyHtml() in js/post.js still emits a handful of the OLD
+   theme's utility classes verbatim (bg-electric-indigo, border-glass-border,
+   focus:ring-electric-indigo, ...) inside one big template string - editing
+   every occurrence there was worse than retinting the classes themselves here.
+   Scoped to #post-content rather than .editorial-page: the shared auth modal
+   (js/api.js injectAuthModal()) uses several of these SAME utility class names
+   and is a direct child of <body> like everything else, so a body-wide
+   override would silently reskin login/register on just these two pages
+   while it stayed the old theme everywhere else. #post-content does not
+   contain the auth modal, so this reaches only the article's own comment
+   tree, its reply/report forms, and its textareas. */
+#post-content .bg-electric-indigo { background-color: rgb(var(--ed-primary)); }
+#post-content .text-electric-indigo,
+#post-content .text-primary { color: rgb(var(--ed-ink)); }
+#post-content .hover\:text-electric-indigo:hover,
+#post-content .hover\:text-primary:hover { color: rgb(var(--ed-accent)); }
+#post-content .border-glass-border { border-color: rgb(var(--ed-divider)); }
+#post-content .focus\:border-electric-indigo:focus { border-color: rgb(var(--ed-ink)); }
+#post-content .focus\:ring-electric-indigo:focus { --tw-ring-color: rgb(var(--ed-ink) / 0.25); }
+#post-content .bg-surface-container\/50 { background-color: rgb(var(--ed-surface-low) / 0.7); }
+/* .comment-report-count keeps the shared --c-error red (common.css) - a
+   semantic warning colour, not a stylistic one, so it is left alone. */
+#post-content .comment-hidden-note {
+  background: rgb(var(--ed-surface));
+  color: rgb(var(--ed-ink-faint));
+}
+/* The hashtag chips post.js builds in loadPost() (js/post.js). */
+#post-content .bg-surface-container { background-color: rgb(var(--ed-surface)); color: rgb(var(--ed-ink-soft)); }
+#post-content .hover\:bg-surface-container-high:hover { background-color: rgb(var(--ed-surface-high)); }
+
+/* ---- terms.html ----
+   The document body (.terms-body, common.css) already reads every colour
+   through the --c-* alias above - only the headings need a push toward the
+   display serif the rest of the site's h2s use; body copy stays Inter,
+   same as everywhere else. */
+.editorial-page .terms-body h2 {
+  font-family: 'Newsreader', Georgia, serif;
+}
+
+/* ---- Maintenance notice: the one AI-glass-kit leftover ----
+   .maintenance-icon/-pill/-retry (common.css) read colour through
+   --brand-gradient - a linear-gradient() whose two var() stops never actually
+   retint here: --brand-gradient is declared once, at :root, so ITS computed
+   value (the gradient with the raw indigo/cyan numbers baked in) is what
+   inherits down to every descendant, .editorial-page included - redeclaring
+   --c-electric-indigo/--c-secondary-container on .editorial-page (the alias
+   above) only reaches a var() that reads them DIRECTLY, not one buried inside
+   another custom property that was never itself redeclared past :root. The
+   visible result was a floating, bouncing, indigo-to-cyan gradient tile with
+   a pulsing status dot - the generic glass/gradient "AI SaaS" look this
+   redesign moved away from everywhere else - sitting untouched on the one
+   page nobody had looked at since. Flattened here to the same solid
+   black/white square + plain accent kicker every other flat control on this
+   page already uses (.ed-avatar-btn, .ed-kicker), with the motion dropped
+   rather than retinted: nothing else on an editorial page floats or pulses on
+   its own, so this was never a style mismatch alone. */
+.editorial-page .maintenance-icon {
+  background: rgb(var(--ed-primary));
+  color: rgb(var(--ed-on-primary));
+  box-shadow: none;
+  animation: none;
+}
+.editorial-page .maintenance-pill {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgb(var(--ed-accent));
+}
+.editorial-page .maintenance-dot {
+  background: rgb(var(--ed-accent));
+  animation: none;
+}
+.editorial-page .maintenance-retry {
+  background: rgb(var(--ed-primary));
+  color: rgb(var(--ed-on-primary));
+  font-family: 'Inter', sans-serif;
+  box-shadow: none;
+}
+.editorial-page .maintenance-retry:hover {
+  background: rgb(var(--ed-accent));
+  box-shadow: none;
+  transform: none;
+}
+
+/* Card and lead titles are real <a href> links (so a crawler can follow them -
+   server/ssr-content.js, home.js, viewall.js); they read as the title, not as
+   a link: the whole card is already the click target. */
+.ed-card-link {
+  color: inherit;
+  text-decoration: none;
+}
+.ed-card-link:focus-visible {
+  outline: 2px solid rgb(var(--ed-accent));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+/* The server-rendered pager uses <a> where viewall.js uses <button>. */
+a.pager-btn { text-decoration: none; }
+
+/* ---- "Tất cả bài viết": square tiles (feedback 2026-10-04) ----
+   Scoped to #viewall-grid; the homepage's #more-grid keeps the card shape.
+   A square has no room for a 4:3 photo AND the text under it, so:
+   - a card WITH a cover: the photo fills the whole tile and the date + title
+     sit on a dark scrim along its bottom edge (fixed light ink - it is always
+     over a photo, in every theme);
+   - a card WITHOUT one (.ed-card--text): tag, date, title and a longer
+     excerpt fill the square.
+   A photo tile shows 2 lines of the excerpt; its hashtags stay in the markup
+   (search engines, screen readers) but are hidden from the tile. */
+#viewall-grid { grid-auto-rows: auto; }
+#viewall-grid > .ed-panel {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  height: auto;
+}
+#viewall-grid > .ed-panel:not(.ed-card--text) > .overflow-hidden {
+  position: absolute;
+  inset: 0;
+}
+#viewall-grid > .ed-panel:not(.ed-card--text) .ed-photo {
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+#viewall-grid > .ed-panel:not(.ed-card--text) > .flex-grow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  flex-grow: 0;
+  padding: 2.5rem 1.25rem 1.1rem;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.82), rgb(0 0 0 / 0.55) 55%, rgb(0 0 0 / 0));
+  color: #fff;
+  pointer-events: none; /* clicks fall through to the card (and its title link below) */
+}
+#viewall-grid > .ed-panel:not(.ed-card--text) > .flex-grow a { pointer-events: auto; }
+#viewall-grid > .ed-panel:not(.ed-card--text) .ed-icon-faint { color: rgb(255 255 255 / 0.78); }
+#viewall-grid > .ed-panel:not(.ed-card--text) .ed-story-title--sm {
+  color: #fff;
+  min-height: 0;
+  margin-bottom: 0;
+}
+#viewall-grid > .ed-panel:not(.ed-card--text) .ed-card-link { color: #fff; }
+/* Two lines of the excerpt under the title - the author's own short summary,
+   or, when there is none, the first sentences of the first paragraph (the
+   server fills that in: attachExcerptFallback(), server/excerpt.js). */
+#viewall-grid > .ed-panel:not(.ed-card--text) .ed-excerpt {
+  margin-top: 0.4rem;
+  min-height: 0;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: rgb(255 255 255 / 0.85);
+}
+#viewall-grid > .ed-panel:not(.ed-card--text) .flex-grow > .mt-md:last-child { display: none; }
+/* Text-only tile: the longer excerpt is what fills the square. */
+#viewall-grid > .ed-card--text .ed-excerpt {
+  -webkit-line-clamp: 7;
+  line-clamp: 7;
+  min-height: 0;
+}
+#viewall-grid > .ed-card--text .ed-story-title--sm { min-height: 0; }
+
+/* "Đọc nhiều nhất" (home.js, #latest-secondary): the rank number sits on the
+   vertical centre of its row - tag, title and views - not on its top edge. */
+#latest-secondary .ed-story-item { align-items: center; }
+
+/* ==========================================================================
+   Retro palette (2026-10-13) - warm, lightly vintage: cream paper, ink-brown
+   text, one muted rust accent, a gold for numbers and a moss for hashtags.
+   Only the palette and a few soft touches change; the layout is untouched.
+   Light and dark ("Tối") are re-pointed here; "Đọc ban đêm" (html.dark.sepia)
+   keeps its own palette. Approved from the demo artifact "Gió Lào Retro".
+   Undo: delete this section (backup: backups/before-retro-20261013/).
+   ========================================================================== */
+.editorial-page {
+  --ed-bg: 246 241 231;              /* #F6F1E7 cream paper */
+  --ed-surface-lowest: 251 248 241;  /* #FBF8F1 card face */
+  --ed-surface-low: 241 234 220;
+  --ed-surface: 238 230 214;         /* #EEE6D6 chips, pills */
+  --ed-surface-high: 230 220 200;
+  --ed-ink: 44 38 33;                /* #2C2621 ink brown */
+  --ed-ink-soft: 91 81 72;
+  --ed-ink-faint: 140 128 116;
+  --ed-divider: 225 215 196;         /* #E1D7C4 warm hairline */
+  --ed-primary: 44 38 33;
+  --ed-on-primary: 251 248 241;
+  --ed-primary-container: 58 50 43;
+  --ed-accent: 164 70 47;            /* #A4462F muted rust */
+  --ed-on-accent: 255 248 238;
+  --ed-accent-soft: 243 221 210;
+  --ed-on-accent-soft: 74 26 14;
+  --ed-gold: 184 138 62;             /* #B88A3E numbers, pull quotes */
+  --ed-moss: 63 107 102;             /* #3F6B66 hashtags */
+}
+html.dark:not(.sepia) .editorial-page {
+  --ed-bg: 30 26 22;                 /* #1E1A16 charcoal brown */
+  --ed-surface-lowest: 37 32 27;
+  --ed-surface-low: 34 29 24;
+  --ed-surface: 43 37 31;
+  --ed-surface-high: 53 46 39;
+  --ed-ink: 234 225 211;             /* #EAE1D3 cream */
+  --ed-ink-soft: 194 182 165;
+  --ed-ink-faint: 143 132 118;
+  --ed-divider: 58 51 43;
+  --ed-primary: 234 225 211;
+  --ed-on-primary: 30 26 22;
+  --ed-primary-container: 53 46 39;
+  --ed-accent: 219 132 102;          /* #DB8466 */
+  --ed-on-accent: 30 26 22;
+  --ed-accent-soft: 74 44 32;
+  --ed-on-accent-soft: 245 211 196;
+  --ed-gold: 217 174 98;
+  --ed-moss: 141 184 177;
+}
+html.dark.sepia .editorial-page {
+  --ed-gold: var(--ed-accent);
+  --ed-moss: var(--ed-accent);
+}
+
+/* Soft touches: rounder cards that lift a little, photos a shade warmer,
+   gold numbers in "Đọc nhiều nhất", moss hashtags. */
+.editorial-page .ed-panel { border-radius: 8px; }
+.editorial-page .ed-masonry > .ed-panel,
+.editorial-page #viewall-grid > .ed-panel {
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+@media (hover: hover) {
+  .editorial-page .ed-masonry > .ed-panel:hover,
+  .editorial-page #viewall-grid > .ed-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 1px 2px rgb(60 40 20 / 0.06), 0 6px 18px -10px rgb(60 40 20 / 0.22);
+  }
+}
+.editorial-page .ed-photo { filter: sepia(0.08) saturate(0.95); }
+html.dark .editorial-page .ed-photo { filter: sepia(0.08) saturate(0.9) brightness(0.94); }
+.editorial-page .ed-story-item > .ed-mono {
+  color: rgb(var(--ed-gold));
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 1.75rem !important; /* beats the inline 1.25rem from home.js */
+}
+.editorial-page .ed-hashtag { color: rgb(var(--ed-moss)); }
+@media (prefers-reduced-motion: reduce) {
+  .editorial-page .ed-masonry > .ed-panel,
+  .editorial-page #viewall-grid > .ed-panel { transition: none; }
+}
+/* "Tự động" icon: a ring with its right half solid. The ring stays hollow when
+   picked, or the whole icon would turn into a plain disc. */
+.ed-theme-opt[data-theme-mode="auto"] svg circle { fill: none; }
+
+/* Account menu taller than the screen (an admin's menu on a phone): cap it at
+   the space under the fixed header and scroll inside it, without the page
+   behind scrolling along. dvh follows the phone's browser bars; the vh line
+   is the fallback for browsers without it. */
+.editorial-page #user-dropdown-menu {
+  max-height: calc(100vh - 5.5rem);
+  max-height: calc(100dvh - 5.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}

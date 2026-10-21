@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-name="Về tác giả">Về tác giả - AnonyHT</title>
+<meta name="description" content="Về tác giả của blog - ảnh, tiểu sử và các kênh mạng xã hội.">
+<meta name="theme-color" content="#f6f1e7" data-theme-color-dark="#1e1a16">
+<!-- Favicon do admin đặt (Bảng quản trị > Quản lí trang chủ). server/render-html.js
+     điền href từ bảng settings trước khi gửi; giá trị trống hoặc chưa đặt thì bỏ cả thẻ. -->
+<link rel="icon" data-setting-href="favicon">
+<!-- Theme switch. MUST stay here - blocking, in <head>, ahead of the
+     stylesheets - so <html class="dark"> is set before the first paint.
+     Deferring it (or folding it into api.js at the end of <body>) brings back
+     the white flash on every navigation. -->
+<script src="/js/theme.js"></script>
+
+<!-- Fonts. Both families are SELF-HOSTED in /css/fonts.css, which
+     scripts/fetch-fonts.py generates: Inter as the static faces
+     Google serves per unicode-range (latin / latin-ext / vietnamese - the
+     three a page of Vietnamese prose actually selects), Material Symbols as a
+     subset of just the icons in use. Same-origin is the point: the first paint
+     waits on no third party, the faces are discovered while this
+     render-blocking stylesheet parses, and the hashed filenames are what lets
+     server.js serve /fonts/ as immutable for a year.
+     The faces the first paint sets text in are preloaded between the
+     @generated markers below; fetch-fonts.py rewrites their hashed hrefs. -->
+<link href="/css/fonts.css" rel="stylesheet">
+<!-- @generated:font-preload -->
+<link as="font" crossorigin href="/fonts/material-symbols-subset.c7d51076.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-latin.3100e775.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-vietnamese.5c66f9e0.woff2" rel="preload" type="font/woff2">
+<!-- /@generated:font-preload -->
+
+<!-- Editorial redesign (shared with the rest of the site) - see
+     css/editorial.css. Newsreader is the headline display serif; preloaded
+     here for the same reason as the two Inter faces above. Not
+     @generated - hand-maintained, not part of the shared fetch-fonts.py
+     pipeline. -->
+<link as="font" crossorigin href="/fonts/newsreader-n-400-latin.62981321.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/newsreader-n-400-vietnamese.f0dcc979.woff2" rel="preload" type="font/woff2">
+
+<!-- Design tokens, then the utilities. tailwind.css is COMPILED (see
+     tailwind.config.js + `npm run build:css`). Load order is deliberate -
+     see common.css/editorial.css's own header comments for why tailwind.css
+     has to load last. -->
+<link href="/css/common.css" rel="stylesheet">
+<link href="/css/tailwind.css" rel="stylesheet">
+<link href="/css/editorial.css" rel="stylesheet">
+<style>
+  /* The page's shared reading-width container (max-w-3xl, same as
+     terms.html) fits a wall of paragraph text but starved this two-column
+     bio card: at 768px total width, a 2:1 photo:text split left the text
+     column under 250px, wrapping every short sentence onto its own line
+     (feedback, with a screenshot showing exactly that). This page's own
+     <main> gets a wider cap instead - #about-main below - since a card
+     this shape needs more like an article-grid page's width (max-w-7xl
+     elsewhere) than a paragraph-of-prose page's. */
+  #about-main { max-width: 72rem; }
+  /* Portrait + text side by side, not stacked-and-centred. flex: 3 / flex: 2
+     on two children of the same row is a 3:2 (60/40) split - photo still
+     the visually larger element, but not so dominant that the text column
+     is left too narrow to wrap naturally (was flex: 2 / flex: 1, a 2:1 split
+     that combined with the narrower container above to squeeze the bio
+     text down to one short word per line). Stacked on a phone (photo
+     full-width on top, text below) - a 60/40 row has no room to be either
+     column at a narrow width. */
+  #author-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  @media (min-width: 640px) {
+    #author-card { flex-direction: row; align-items: flex-start; }
+  }
+  .author-photo-col { width: 100%; }
+  @media (min-width: 640px) {
+    .author-photo-col { flex: 3; }
+  }
+  .author-text-col {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  @media (min-width: 640px) {
+    .author-text-col { flex: 2; align-items: flex-start; text-align: left; }
+  }
+  /* Square via aspect-ratio, not a fixed width/height like the small header
+     avatar (.ed-byline-avatar) - this photo's actual size follows its
+     column's own width (60% of the card, itself responsive), so a fixed px
+     box would either float in empty space on a wide screen or overflow on a
+     narrow one. */
+  .author-photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 8px;
+    background: rgb(var(--ed-accent-soft));
+  }
+  /* A permanent rounded-square block around each social icon (feedback: the
+     plain .ed-icon-btn underneath only ever gets a border/background on
+     hover or focus, so before either of those the icons floated with no
+     button chrome at all - only whichever one the reader last hovered
+     looked like a real button, and every icon read differently depending on
+     interaction state instead of all reading the same at rest). Same 8px
+     corner radius as .author-photo, so the icon row and the portrait above
+     it read as one family of rounded squares - "như Instagram" (the
+     reference given): that app's own icon is exactly this shape, a rounded
+     square holding one glyph. */
+  .author-social-link {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid rgb(var(--ed-divider));
+    border-radius: 8px;
+  }
+  .author-social-link:hover {
+    border-color: rgb(var(--ed-accent));
+  }
+</style>
+</head>
+<body class="editorial-page font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col">
+
+<!-- TopNavBar -->
+<nav class="ed-nav fixed top-0 w-full z-50">
+<div class="flex justify-between items-center h-16 px-sm md:px-margin-page w-full max-w-7xl mx-auto gap-6">
+<div class="flex items-center gap-6">
+<button class="ed-icon-btn ed-hamburger-btn flex items-center justify-center p-1.5" type="button" data-action="mobile-nav-toggle" aria-label="Mở menu điều hướng"><span class="material-symbols-outlined">menu</span></button>
+<a class="group inline-flex items-baseline gap-1.5" href="/index.html" id="nav-brand">
+<span class="ed-wordmark" data-brand-name>TuanPA</span>
+</a>
+<div class="ed-nav-links">
+<a class="ed-nav-link" href="/index.html">Trang chủ</a>
+<a class="ed-nav-link" href="/viewall.html">Tất cả bài viết</a>
+<a class="ed-nav-link is-active" href="/about.html">Về tác giả</a>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<div class="relative hidden sm:block" id="header-search-wrap">
+<span class="material-symbols-outlined ed-icon-faint absolute left-3 top-1/2 -translate-y-1/2 text-[16px] pointer-events-none">search</span>
+<input id="search-input" type="text" placeholder="Tìm kiếm bài viết..." aria-label="Tìm kiếm bài viết" class="ed-search pl-8 pr-1 py-1.5 font-body-sm text-body-sm w-40 lg:w-56">
+</div>
+<button class="ed-icon-btn sm:hidden flex items-center justify-center p-2" id="header-search-toggle" title="Tìm kiếm" data-action="search-toggle"><span class="material-symbols-outlined">search</span></button>
+<div class="ed-nav-divider hidden sm:block" aria-hidden="true"></div>
+<a data-writer-only href="/write.html" aria-label="Viết bài" class="ed-btn-primary ed-nav-write inline-flex text-[12px]">
+<span class="material-symbols-outlined">edit_note</span>Viết bài
+</a>
+<div class="relative">
+<button id="nav-avatar-btn" class="ed-avatar-btn overflow-hidden flex items-center justify-center active:scale-95 transition-transform" title="Tài khoản" data-action="nav-dropdown">
+<img alt="Ảnh đại diện" class="w-full h-full object-cover hidden" id="nav-avatar-img">
+<span class="material-symbols-outlined ed-icon-soft text-[18px]" id="nav-avatar-placeholder">person</span>
+</button>
+<div class="ed-dropdown-panel absolute right-0 mt-2 w-56 z-50 hidden origin-top-right" id="user-dropdown-menu"></div>
+</div>
+</div>
+</div>
+</nav>
+
+<!-- Search Overlay -->
+<div class="ed-search-overlay hidden sm:hidden fixed top-16 left-0 w-full z-40" id="search-overlay">
+<div class="max-w-7xl mx-auto px-sm md:px-margin-page py-4 flex items-center gap-4">
+<span class="material-symbols-outlined ed-icon-faint">search</span>
+<input class="ed-search flex-grow min-w-0 border-none py-1 font-body-lg text-body-lg" id="search-input-mobile" placeholder="Tìm kiếm bài viết..." type="text">
+<button class="ed-icon-btn shrink-0 w-11 h-11 flex items-center justify-center" aria-label="Đóng tìm kiếm" data-action="search-close"><span class="material-symbols-outlined">close</span></button>
+</div>
+</div>
+
+<main id="about-main" class="flex-grow pt-24 md:pt-28 pb-lg px-sm md:px-margin-page w-full max-w-3xl mx-auto flex flex-col gap-md">
+
+<header class="flex flex-col gap-2">
+<a class="ed-link-back tap-target inline-flex items-center gap-1.5 w-fit font-label-md text-label-md" href="/index.html"><span class="material-symbols-outlined text-[18px]">arrow_back</span><span>Trang chủ</span></a>
+<h1 class="ed-hero-title">Về tác giả</h1>
+</header>
+
+<!-- Filled entirely client-side by js/about.js off GET /api/settings - the
+     same author_* keys Bảng quản trị > Quản lí trang chủ writes. No
+     server-side templating for this page (unlike favicon/theme-color above,
+     which need to be right before the first paint): the author card can wait
+     the one extra round-trip a page load already makes for the header's own
+     avatar/login state. -->
+<article class="ed-panel p-sm sm:p-md md:p-lg hidden" id="author-card">
+<div class="author-photo-col" id="author-photo-col">
+<img id="author-photo" class="author-photo hidden" alt="">
+</div>
+<div class="author-text-col">
+<h2 class="ed-section-title" id="author-name"></h2>
+<p class="ed-icon-soft hidden" id="author-bio" style="white-space: pre-wrap;"></p>
+<div class="flex items-center gap-3 hidden" id="author-social">
+<a class="ed-icon-btn author-social-link hidden flex items-center justify-center p-2" id="author-link-website" target="_blank" rel="noopener noreferrer" aria-label="Website" title="Website">
+<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.6 4 6 4 9.5s-1.4 6.9-4 9.5c-2.6-2.6-4-6-4-9.5s1.4-6.9 4-9.5z"/></svg>
+</a>
+<a class="ed-icon-btn author-social-link hidden flex items-center justify-center p-2" id="author-link-facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook" title="Facebook">
+<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M22 12a10 10 0 1 0-11.5 9.9v-7H7.9V12h2.6V9.8c0-2.6 1.6-4 3.9-4 1.1 0 2.3.2 2.3.2v2.5h-1.3c-1.3 0-1.7.8-1.7 1.6V12h2.9l-.5 2.9h-2.4v7A10 10 0 0 0 22 12z"/></svg>
+</a>
+<a class="ed-icon-btn author-social-link hidden flex items-center justify-center p-2" id="author-link-instagram" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram">
+<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" stroke="none"/></svg>
+</a>
+<a class="ed-icon-btn author-social-link hidden flex items-center justify-center p-2" id="author-link-youtube" target="_blank" rel="noopener noreferrer" aria-label="YouTube" title="YouTube">
+<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 9.3v5.4l4.8-2.7-4.8-2.7z" fill="currentColor"/></svg>
+</a>
+<a class="ed-icon-btn author-social-link hidden flex items-center justify-center p-2" id="author-link-tiktok" target="_blank" rel="noopener noreferrer" aria-label="TikTok" title="TikTok">
+<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M16.6 3c.4 2.3 1.9 3.8 4.2 4.1v3.1c-1.5.1-2.9-.4-4.2-1.3v6.6c0 3.4-2.7 5.9-5.9 5.9S4.8 18.9 4.8 15.5c0-3.2 2.5-5.8 5.6-5.9v3.1c-1.5.2-2.6 1.4-2.6 2.9 0 1.6 1.3 2.9 2.9 2.9s2.9-1.3 2.9-2.9V3h3z"/></svg>
+</a>
+</div>
+</div>
+</article>
+
+<p class="ed-icon-faint font-body-sm text-body-sm hidden" id="author-empty">Trang "Về tác giả" chưa được thiết lập. Vào Bảng quản trị &gt; Quản lí trang chủ để thêm ảnh, tên và giới thiệu.</p>
+
+</main>
+
+<!-- Footer -->
+<footer class="ed-footer w-full py-3 mt-auto">
+<div class="text-center px-sm md:px-margin-page max-w-7xl mx-auto font-body-sm text-body-sm">© <span id="footer-year"></span> <span data-footer-text data-fallback="TuanPA.">TuanPA.</span></div>
+</footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/about.js"></script>
+</body>
+</html>

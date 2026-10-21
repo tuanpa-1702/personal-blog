@@ -1,0 +1,16 @@
+/* Build input for the Tailwind CLI -> public/css/tailwind.css
+ *
+ * The pages used to load https://cdn.tailwindcss.com, which is not a stylesheet
+ * but a 451 KB compiler: it parses the DOM and only then generates and injects a
+ * <style>. Until that finished, NOT ONE utility existed - `.hidden` included,
+ * and public/css/common.css never defines it - so every element the markup had
+ * hidden was painted, and the page was a bare vertical stack of unstyled text.
+ * That is the flash on every reload.
+ *
+ * Compiling the same config ahead of time turns it into an ordinary blocking
+ * <link>, so the utilities are present in the first paint. Rebuild with:
+ *   npm run build:css
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

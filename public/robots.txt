@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /write.html
+Allow: /
+
+Sitemap: https://blog.tuanpa.tech/sitemap.xml

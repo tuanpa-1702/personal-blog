@@ -1,0 +1,1144 @@
+
+/* ==========================================================================
+   Media library (Thư viện) — shared by the admin tab and the picker modal
+   in write.html, so the two look identical. Loaded from public/css/media.css
+   by both pages rather than duplicated in each page's <style>.
+   ========================================================================== */
+
+/* ---------- Embedded media in a post ---------- */
+
+/* Lives here rather than in common.css because it is the same feature as the
+   library - both are "media in a post" - and because this file is already loaded by
+   write.html for the picker. The reading page (post.html) loads it for the same
+   reason: an embed has to look the same in the editor preview and on the page.
+
+   The wrapper carries the sizing (an aspect-ratio, or a fixed height for the players
+   that have a designed one) and the iframe fills it absolutely. `aspect-ratio` alone
+   on the iframe is not enough: the element has intrinsic dimensions of its own, and
+   some providers set width/height attributes that would win. */
+.rich-embed { margin: 2rem 0; }
+
+.rich-embed-frame {
+  position: relative;
+  width: 100%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: rgb(var(--c-surface-container-high));
+  border: 1px solid rgb(var(--c-outline-variant));
+}
+.rich-embed-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* ---------- Layout ---------- */
+
+/* Hand-written rather than Tailwind utilities, and not by preference: tailwindcss
+   is not installed in node_modules on this project, so `npm run build:css` cannot
+   run and a utility that is not already in the compiled public/css/tailwind.css
+   compiles to NOTHING - the element is silently unstyled. The compiled file has no
+   `xl:` variants, no `grid-cols-2/3`, no `min-w-[...]`, and no `pt-5`/`pb-4`/`mr-1`,
+   so every one of those is expressed here instead. Checked against the 357 classes
+   the file actually contains.
+
+   The grid and the detail panel side by side above 1280px, stacked below. 1280 is
+   Tailwind's own `xl` breakpoint, kept so this agrees with the rest of the page. */
+/* The grid, and - only while it is open - the detail panel beside it. js/media.js
+   puts .detail-open on this container when a card is clicked. A grid track keeps its
+   width whether or not anything fills it, so a reserved-but-empty 17rem column next
+   to a shut panel would be space stolen from the thumbnails on every visit where
+   nobody has clicked a card yet.
+
+   The folder shelf is NOT a column here. It used to be - this was a three-track
+   `.media-layout-3`, 13rem of folder tree beside the grid - and admin.html now
+   renders the folders as a full-width card ABOVE this layout instead, because a
+   13rem column is a list and a shelf wants a row. What is left is the two-column
+   shape that layout only reached once the folder track was taken out of it, so it
+   takes the plain name.
+   minmax(0,1fr) rather than 1fr on the grid's track: a `1fr` track is at least as
+   wide as its min-content, and the min-content of a thumbnail grid is one tile that
+   cannot shrink - which is how a wide library pushes its own panel off the edge.
+   Below 1280px everything stacks in reading order: grid, then panel. */
+.media-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* 24px is what .gap-gutter compiles to, so this matches the page's other grids. */
+  gap: 24px;
+  align-items: start;
+}
+@media (min-width: 1280px) {
+  .media-layout.detail-open {
+    grid-template-columns: minmax(0, 1fr) 17rem;
+  }
+  /* The detail panel follows the reader down a long grid instead of scrolling off. */
+  .media-layout .media-detail {
+    position: sticky;
+    top: 5rem;
+  }
+}
+
+/* The search field must not collapse to nothing when the row wraps. */
+.media-search-wrap {
+  position: relative;
+  flex: 1 1 12rem;
+  min-width: 12rem;
+}
+
+/* The picker's header and footer keep their own padding: `pt-5`, `pb-4` and
+   `sm:px-6` are all absent from the compiled utilities. */
+.media-picker-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.25rem 1rem;
+  border-bottom: 1px solid rgb(var(--c-outline-variant) / 0.4);
+}
+@media (min-width: 640px) {
+  .media-picker-head {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* An icon sitting inside a text button. `mr-1` does not exist in the compiled file. */
+.media-btn-icon {
+  font-size: 18px;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
+/* ---------- Uploader ---------- */
+
+/* A label wrapping a hidden file input, so a click anywhere on it browses, and a
+   drop anywhere on it uploads. Dashed rather than solid: it reads as a target to
+   put something INTO, not a button that does something. */
+.media-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 1.75rem 1rem;
+  border: 1px dashed rgb(var(--c-electric-indigo) / 0.4);
+  border-radius: 0.75rem;
+  background: rgb(var(--c-surface-container-lowest));
+  color: rgb(var(--c-primary));
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.media-dropzone:hover {
+  background: rgb(var(--c-surface-container));
+  border-color: rgb(var(--c-electric-indigo) / 0.7);
+}
+/* While a file is over the zone. A solid border and a tint, so the difference from
+   the resting state is unmistakable at a glance mid-drag. */
+.media-dropzone.is-dragover {
+  border-style: solid;
+  border-color: rgb(var(--c-primary));
+  background: rgb(var(--c-electric-indigo) / 0.08);
+}
+.media-dropzone:focus-within {
+  outline: 2px solid rgb(var(--c-primary));
+  outline-offset: 2px;
+}
+
+/* Progress. Only shown while an upload is running - an admin upload can be large
+   enough that without this the page looks frozen. */
+.media-progress {
+  margin-top: 0.75rem;
+}
+.media-progress-track {
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: rgb(var(--c-surface-container-high));
+  overflow: hidden;
+}
+.media-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 9999px;
+  background: rgb(var(--c-primary));
+  transition: width 0.15s linear;
+}
+.media-progress-label {
+  margin-top: 0.375rem;
+  color: rgb(var(--c-on-surface-variant));
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Grid ---------- */
+
+/* auto-fill, not auto-fit: an almost-empty library keeps thumbnail-sized cards
+   instead of stretching two images across the full width. */
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+  /* Changing page scrolls the grid's top into view; 5rem keeps it clear of the
+     fixed 4rem nav (same offset the sticky detail panel uses). */
+  scroll-margin-top: 5rem;
+}
+
+.media-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.375rem;
+  border: 1px solid rgb(var(--c-outline-variant));
+  border-radius: 0.625rem;
+  background: rgb(var(--c-surface-container-lowest));
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  /* A page holds up to 96 cards; the ones below the fold do not need layout or
+     paint until they get close. content-visibility skips both, which is most of
+     why this grid scrolls smoothly now. contain-intrinsic-size is the stand-in
+     size for the skipped cards (the `auto` keyword remembers each card's real
+     size once it has rendered, so the scrollbar length stays right); the guess
+     is a medium tile plus its two lines of metadata. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 10rem 13rem;
+}
+.media-card:hover {
+  border-color: rgb(var(--c-primary));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgb(var(--c-primary) / 0.12);
+}
+.media-card:focus-visible {
+  outline: 2px solid rgb(var(--c-primary));
+  outline-offset: 2px;
+}
+
+/* A fixed square regardless of the image's aspect ratio, so the grid stays a grid.
+   The checkerboard shows through a transparent PNG - otherwise a white logo on
+   transparency looks like an empty card. */
+.media-card-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  background-color: rgb(var(--c-surface-container));
+  background-image:
+    linear-gradient(45deg, rgb(var(--c-outline-variant) / 0.35) 25%, transparent 25%),
+    linear-gradient(-45deg, rgb(var(--c-outline-variant) / 0.35) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgb(var(--c-outline-variant) / 0.35) 75%),
+    linear-gradient(-45deg, transparent 75%, rgb(var(--c-outline-variant) / 0.35) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+}
+.media-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.media-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+  padding: 0 0.125rem 0.125rem;
+}
+/* One line, ellipsised: a filename can be arbitrarily long and must not change the
+   card's height, or the grid rows stop lining up. */
+.media-card-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(var(--c-on-surface));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-card-facts {
+  font-size: 0.6875rem;
+  color: rgb(var(--c-on-surface-variant));
+}
+
+.media-empty {
+  grid-column: 1 / -1;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: rgb(var(--c-on-surface-variant));
+}
+
+/* ---------- View modes ---------- */
+
+/* The card holding the scrolling grid opts out of the frosted-glass blur every
+   other .glass-card keeps: a backdrop-filter region is re-rasterized every frame
+   while content moves, and this card is the widest, most-scrolled surface in the
+   app - with a page of tiles inside it, that blur was most of the scroll jank.
+   The translucent surface colour stays; over the page's smooth glow it reads the
+   same without the blur. media.css loads after common.css, so this single class
+   wins over .glass-card's backdrop-filter. */
+.media-grid-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Four ways to look at the same library, switched from the toolbar above the grid
+   and remembered in localStorage (js/media.js). The mode is one class on .media-grid
+   - 'medium' is the unmarked default - so the cards themselves stay mode-unaware. */
+
+/* Small tiles: thumbnails first, metadata reduced to the name. For scanning a large
+   library by shape and colour rather than reading facts about each file. */
+.media-grid.is-view-small {
+  grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr));
+  gap: 0.5rem;
+}
+.media-grid.is-view-small .media-card {
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+}
+.media-grid.is-view-small .media-card-thumb {
+  border-radius: 0.3125rem;
+}
+.media-grid.is-view-small .media-card-meta {
+  padding: 0 0.125rem 0.125rem;
+}
+.media-grid.is-view-small .media-card-name {
+  font-size: 0.6875rem;
+}
+.media-grid.is-view-small .media-card-facts {
+  display: none;
+}
+
+/* Large tiles: fewer, bigger cards; the facts row gets room to breathe. */
+.media-grid.is-view-large {
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: 1rem;
+}
+
+/* List: one image per row, thumbnail beside the facts. The slowest way to browse but
+   the fastest way to read, so the picker and the admin tab both offer it. */
+.media-grid.is-view-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.media-grid.is-view-list .media-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+}
+.media-grid.is-view-list .media-card-thumb {
+  flex: 0 0 3.5rem;
+  width: 3.5rem;
+}
+.media-grid.is-view-list .media-card-meta {
+  flex: 1 1 auto;
+  padding: 0;
+}
+
+/* The mode switch. A segmented pill so the four options read as one control, matching
+   the rounded language of the search field and chips. */
+.media-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.media-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.125rem;
+  border: 1px solid rgb(var(--c-outline-variant));
+  border-radius: 9999px;
+  background: var(--glass-wash-1);
+}
+.media-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.media-view-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+.media-view-btn:hover {
+  color: rgb(var(--c-primary));
+}
+.media-view-btn.is-active {
+  background: rgb(var(--c-electric-indigo));
+  color: rgb(var(--c-on-primary));
+}
+.media-view-btn:focus-visible {
+  outline: 2px solid rgb(var(--c-primary));
+  outline-offset: 1px;
+}
+
+/* ---------- Pager ---------- */
+
+/* Numbered pages instead of "Tải thêm": with a few hundred images the load-more
+   button buried earlier uploads deeper and deeper, and gave no sense of how many
+   there were. One pill per page, windowed (1 2 … 5 6 7 … 20) once the list grows. */
+.media-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+}
+.media-pager-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  border: 1px solid rgb(var(--c-outline-variant));
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+.media-pager-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+.media-pager-btn:hover:not(:disabled):not(.is-current) {
+  border-color: rgb(var(--c-electric-indigo) / 0.55);
+  color: rgb(var(--c-primary));
+}
+.media-pager-btn.is-current {
+  border-color: rgb(var(--c-electric-indigo));
+  background: rgb(var(--c-electric-indigo));
+  color: rgb(var(--c-on-primary));
+  font-weight: 600;
+}
+.media-pager-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.media-pager-btn:focus-visible {
+  outline: 2px solid rgb(var(--c-primary));
+  outline-offset: 1px;
+}
+.media-pager-gap {
+  padding: 0 0.125rem;
+  font-size: 0.8125rem;
+  color: rgb(var(--c-outline-variant));
+}
+
+/* ---------- Detail panel (admin tab only) ---------- */
+
+/* Beside the grid, not over it: picking through several images to find the right
+   one should not mean opening and closing a dialog each time. */
+.media-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--glass-edge);
+  border-radius: 0.75rem;
+  background: var(--glass-wash-2);
+}
+.media-detail-preview {
+  width: 100%;
+  max-height: 14rem;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  background: rgb(var(--c-surface-container));
+}
+.media-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+}
+.media-detail-row dt {
+  color: rgb(var(--c-on-surface-variant));
+  flex-shrink: 0;
+}
+.media-detail-row dd {
+  color: rgb(var(--c-on-surface));
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Move-to-folder and copy-URL: the panel's two controls ----
+
+   Cut from ONE glass recipe, the same one the Users tab block in admin.html
+   spells out at length:
+     1. a WASH  --glass-wash-2 over --glass-wash-1 poured as a 180deg gradient,
+        denser at the top, so the surface reads as lit from above and the panel
+        behind it still shows through;
+     2. an EDGE --glass-inset, the 1px inner highlight along the top rim;
+     3. DEPTH   --shadow-pill at rest, the indigo --shadow-focus while active.
+
+   The hairlines are outline-variant, not the --glass-edge the panel itself
+   carries: the panel is a pale wash over an almost-white page, so by the time
+   you stack down to a control's rim a white border has no ground left to
+   register on. outline-variant flips with the theme, so a hairline stays a
+   hairline in both (and the dark page's value is lighter than the band it
+   rims, the same trick the Users table uses).
+   No backdrop-filter on what sits in the panel: the panel sits over the page's
+   smooth glow, and blurring a smooth gradient yields the same wash the
+   unblurred colours already give - the same reason .media-grid-panel drops its
+   blur. The ONE exception is the move-to-folder menu below: it leaves the
+   panel and floats over the page like the Users tab's role menu, so it blurs
+   its own backdrop like it.
+
+   Every colour resolves through a theme token, so .dark re-points the whole
+   recipe without a single override here. */
+
+/* ---- Move-to-folder ---- */
+/* A custom listbox, not a native <select> - the same step the Users tab took
+   with its role picker, and for the same reason: the popup the OS draws for a
+   <select> can never carry the site's surface, blur and hairline, so the menu
+   is ordinary DOM instead. The trigger and the menu are one recipe: the
+   trigger is the raised glass pill (wash, inset edge, hairline rim) and the
+   menu is the one floating surface - parented to <body> by js/media.js,
+   placed by hand, blurred like the role menu. The keyboard model and focus
+   behaviour are the role picker's too, so whoever has used one has already
+   used the other. */
+.media-move-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  background: linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1));
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  font-family: var(--font-vi-sans);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+  /* The same chevron path the Users tab's .user-role trigger carries, so the
+     two dropdown faces on this page cannot drift apart. */
+  --chevron-down: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3E%3Cpath d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
+}
+.media-move-trigger .material-symbols-outlined { font-size: 18px; flex-shrink: 0; }
+.media-move-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The chevron is a MASK painted with currentColor, so it follows the trigger's
+   text colour for free - variant grey at rest, indigo on hover, focus and while
+   the menu is open - and rotates to say the menu is up. */
+.media-move-trigger::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  background: currentColor;
+  -webkit-mask: var(--chevron-down) no-repeat center / 14px 14px;
+          mask: var(--chevron-down) no-repeat center / 14px 14px;
+  transition: transform 0.18s ease;
+}
+.media-move-trigger[aria-expanded='true']::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+.media-move-trigger:hover {
+  border-color: rgb(var(--c-electric-indigo) / 0.55);
+  color: rgb(var(--c-primary));
+}
+.media-move-trigger:focus-visible,
+.media-move-trigger[aria-expanded='true'] {
+  outline: none;
+  border-color: rgb(var(--c-electric-indigo));
+  box-shadow: var(--glass-inset), var(--shadow-focus);
+  color: rgb(var(--c-primary));
+}
+
+/* The floating menu. The one surface here that opens over PAGE content rather
+   than sitting in the panel, so - exactly like .user-role-menu - it blurs its
+   own backdrop, and the blur is what buys the translucency: whatever the menu
+   lands on (the grid's photos, mostly) becomes an indistinct wash under a
+   three-layer glass surface. It borrows the nav menus' --menu-border too: a
+   panel floating free of the pane cannot rely on a pale rim. Fixed-position
+   and placed by media.js. */
+.media-move-menu {
+  position: fixed;
+  z-index: 90;
+  min-width: 13rem;
+  max-width: 20rem;
+  max-height: min(22rem, calc(100vh - 2rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.375rem;
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1)),
+    rgb(var(--c-surface-container-low) / 0.72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--menu-border);
+  box-shadow: var(--glass-inset), var(--menu-shadow);
+  animation: dropdown-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  scrollbar-width: thin;
+}
+.media-move-menu[hidden] { display: none; }
+.media-move-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  font-family: var(--font-vi-sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  color: rgb(var(--c-on-surface));
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+}
+.media-move-option-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: rgb(var(--c-on-surface-variant));
+}
+/* The path wraps rather than ellipsising: a destination is only pickable if it
+   is readable, and " / " gives the wrapping its natural joints. */
+.media-move-option-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+/* The folder the image is ALREADY in: tinted like the role menu's selected row,
+   checked, and aria-disabled so neither click nor arrow keys can pick it - a
+   move into the folder it is in is not a move. Declared BEFORE the hover/focus
+   rule below, because the two weigh the same and the later one has to win:
+   hovering the current row must still light it up like any other. */
+.media-move-option.is-current {
+  background: rgb(var(--c-electric-indigo) / 0.09);
+  color: rgb(var(--c-primary));
+  font-weight: 600;
+}
+.media-move-option.is-current .media-move-option-icon { color: rgb(var(--c-primary)); }
+.media-move-option-check { margin-left: auto; visibility: hidden; }
+.media-move-option.is-current .media-move-option-check {
+  visibility: visible;
+  color: rgb(var(--c-primary));
+}
+/* Hover and keyboard highlight land on the same look, so arrowing through the
+   menu feels like moving the pointer. The rim is an inset shadow, not a border:
+   a border would grow the option by 2px the moment it lit up and shunt the
+   menu's height around under the pointer. --glass-inset is listed FIRST because
+   the first shadow paints on top, and both want the same 1px along the upper
+   edge - the light has to win it. */
+.media-move-option:hover:not([aria-disabled='true']),
+.media-move-option:focus:not([aria-disabled='true']) {
+  outline: none;
+  background: linear-gradient(180deg, rgb(var(--c-electric-indigo) / 0.18), rgb(var(--c-electric-indigo) / 0.1));
+  box-shadow: var(--glass-inset), inset 0 0 0 1px rgb(var(--c-electric-indigo) / 0.28);
+  color: rgb(var(--c-primary));
+}
+.media-move-option:hover:not([aria-disabled='true']) .media-move-option-icon,
+.media-move-option:focus:not([aria-disabled='true']) .media-move-option-icon {
+  color: rgb(var(--c-primary));
+}
+@media (prefers-reduced-motion: reduce) {
+  .media-move-trigger,
+  .media-move-trigger::after,
+  .media-move-option { transition: none; }
+  .media-move-menu { animation: none; }
+}
+
+/* ---- Copy-URL ---- */
+/* A recessed well with one raised glass pill inside it - the same pairing the
+   Users tab documents (its sunken filter field against its raised chips).
+   --c-field is the token for recessed (a wash of ink on light, of light on
+   ink) and the inner shadow sinks the well into the panel. The input inside
+   carries no chrome of its own: the well IS the field. */
+.media-url-field {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  background: var(--c-field);
+  box-shadow: inset 0 1px 2px rgb(var(--c-on-surface) / 0.06);
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+/* Focus brightens the well and swaps the inner shadow for the site's indigo
+   focus ring, the same move .user-search:focus makes. The input is readonly
+   but still focusable, so reaching for the URL to select it lights the field. */
+.media-url-field:focus-within {
+  background: var(--glass-wash-1);
+  border-color: rgb(var(--c-electric-indigo));
+  box-shadow: var(--shadow-focus);
+}
+.media-url-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.25rem 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-vi-sans);
+  font-size: 14px;
+  line-height: 20px;
+  color: rgb(var(--c-on-surface));
+}
+.media-url-input:focus { outline: none; }
+/* The copy pill. Resting build is the standard wash-edge-depth; hover warms
+   it with two alphas of indigo like .user-chip; is-copied, toggled by
+   media.js for the same 1.5s the text reads "Đã copy!", does the same in the
+   success green so the confirmation is a colour and not only a word. */
+.media-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  background: linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1));
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(var(--c-on-surface-variant));
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.media-copy-btn:hover {
+  background: linear-gradient(180deg, rgb(var(--c-electric-indigo) / 0.18), rgb(var(--c-electric-indigo) / 0.1));
+  border-color: rgb(var(--c-electric-indigo) / 0.35);
+  color: rgb(var(--c-primary));
+}
+/* Pressed: the pill sinks - the top highlight stays, the drop shadow goes. */
+.media-copy-btn:active { box-shadow: var(--glass-inset); }
+.media-copy-btn:focus-visible {
+  outline: 2px solid rgb(var(--c-electric-indigo));
+  outline-offset: 2px;
+}
+.media-copy-btn.is-copied {
+  background: linear-gradient(180deg, rgb(var(--c-success) / 0.2), rgb(var(--c-success) / 0.12));
+  border-color: rgb(var(--c-success) / 0.4);
+  color: rgb(var(--c-success-text));
+}
+
+/* ---------- Picker modal (write.html) ---------- */
+
+.media-picker-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  /* Wide rather than deep: picking is scanning, and every extra column here is an
+     image found without scrolling. */
+  max-width: 64rem;
+  max-height: 88vh;
+  border-radius: 6px;
+  /* --glass-edge is a WHITE rim (light mode: rgba(255,255,255,0.6)), meant to
+     catch light on a translucent pane - on the flat editorial theme's
+     near-white card that rim is a white border on white, invisible. Explicit
+     --ed-divider instead, the same border every .ed-panel/.ed-dropdown-panel
+     on the site draws. --menu-shadow stays - a floating shadow is fine dark
+     in either theme, unlike a border colour. */
+  border: 1px solid rgb(var(--ed-divider));
+  background: rgb(var(--c-surface-container-lowest));
+  box-shadow: var(--menu-shadow);
+  overflow: hidden;
+}
+/* Only the grid scrolls: the search field and the uploader stay reachable however
+   many images the library holds. */
+.media-picker-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-card,
+  .media-dropzone,
+  .media-progress-fill,
+  .media-view-btn,
+  .media-pager-btn {
+    transition: none;
+  }
+  .media-card:hover {
+    transform: none;
+  }
+}
+
+/* Below lg every control is a finger target, matching the rest of the panel. */
+@media (max-width: 1023px) {
+  .media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  }
+  /* The modes keep their relative density on a phone too. */
+  .media-grid.is-view-small {
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  }
+  .media-grid.is-view-large {
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  }
+  .media-card {
+    min-height: 44px;
+  }
+  .media-view-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .media-pager-btn {
+    min-width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+/* ---------- Folder shelf (admin tab) ----------
+
+   Folders laid out ACROSS the tab, above the grid, instead of in a 13rem column
+   beside it. One card each: icon and name on one line - there is finally room for
+   that - the image count under it, and the folder's own management actions revealed
+   on hover along the bottom.
+
+   The shelf is a row of equal cards rather than a tree, and it cannot be a tree: a
+   tree shows depth by indentation, and indentation across a horizontal rail means
+   nothing. Depth is still reachable, the same way the picker modal has always
+   reached it - the breadcrumb over the grid (#media-breadcrumb) names the folder
+   that is open and every one above it, and clicking a crumb goes back up. Each card
+   carries its full path in `title`, because two folders at different depths can
+   share a name and the card only has room for the last of them.
+
+   The rail does not wrap: wrapping is what turns one shelf into two, and the page
+   numbers under it would stop describing anything. Past FOLDER_PAGE_SIZE cards
+   (js/media.js) the rest are on the next page. overflow-x is the safety net for a
+   page of unusually long names on a narrow screen, where the gesture is a swipe -
+   and the scrollbar is hidden for the reason .user-filter-row in admin.html hides
+   its own: a horizontal bar would draw across the cards it belongs to. Keyboard
+   access is unaffected, since Tab still reaches every card and scrolls it in. */
+.media-folder-rail {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* The cards draw outside their boxes - a 2px focus ring 2px off the edge, and
+     --shadow-cta under the open one - and a scroll container clips at its PADDING
+     box on both axes, since overflow-x:auto computes the visible overflow-y to auto
+     as well. The padding hands that space back and the negative margin hands the
+     layout back to where it would have been. The same pair, for the same reason, as
+     .user-filter-row. */
+  padding: 0.375rem 0.25rem;
+  margin: -0.375rem -0.25rem;
+}
+.media-folder-rail::-webkit-scrollbar { display: none; }
+
+/* One card.
+   flex-basis 9rem, growing to 15rem: six cards plus their five gaps come out at
+   904px against the 918px the content column has at the page cap, so a full page
+   fills the shelf without making it scroll - and a last page holding two folders
+   does not stretch them into two slabs across the whole tab.
+   justify-content:center only matters for the two VIEW cards ("Tất cả ảnh", "Chưa
+   phân loại"), which have no actions row: it centres their button in a card
+   stretched to the height of the ones beside it. On a card WITH actions the
+   margin-top:auto below absorbs all the free space first, and an auto margin on the
+   main axis is exactly what makes justify-content stop applying - so the two rules
+   cannot fight. */
+.media-folder-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1 1 9rem;
+  min-width: 0;
+  max-width: 15rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.5);
+  background: linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1));
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+/* Hover tints the glass indigo rather than replacing it - two alphas of one hue,
+   denser at the top, so the card keeps its overhead light while it warms up. The
+   same move .user-chip:hover makes. */
+.media-folder-card:hover {
+  border-color: rgb(var(--c-electric-indigo) / 0.4);
+  background: linear-gradient(180deg, rgb(var(--c-electric-indigo) / 0.16), rgb(var(--c-electric-indigo) / 0.09));
+}
+/* The folder that is open. FILLED rather than another tint, for the reason the Users
+   tab's selected chip is filled: exactly one card on the shelf is in force and it has
+   to win at a glance, so it stops looking like glass - and --shadow-cta lifts it off
+   the shelf as the one that is switched on. Solid, never a ramp between two colour
+   roles, which would invert between themes (see the lighting note in admin.html). */
+.media-folder-card.is-active {
+  border-color: rgb(var(--c-electric-indigo));
+  background: rgb(var(--c-electric-indigo));
+  box-shadow: var(--glass-inset), var(--shadow-cta);
+}
+/* Everything on a filled card reads against indigo, so it all takes --c-on-primary
+   instead of the on-surface / on-surface-variant pair the unfilled cards use. */
+.media-folder-card.is-active .media-folder-btn,
+.media-folder-card.is-active .media-folder-btn .material-symbols-outlined {
+  color: rgb(var(--c-on-primary));
+}
+.media-folder-card.is-active .media-folder-count,
+.media-folder-card.is-active .media-folder-action { color: rgb(var(--c-on-primary) / 0.82); }
+.media-folder-card.is-active .media-folder-action:hover {
+  background: rgb(var(--c-on-primary) / 0.22);
+  color: rgb(var(--c-on-primary));
+}
+/* Deleting the folder you are standing in is the one destructive action on a filled
+   card, so it keeps its red rather than going white with the rest. */
+.media-folder-card.is-active .media-folder-action--danger:hover {
+  background: rgb(var(--c-error) / 0.4);
+  color: rgb(var(--c-on-primary));
+}
+
+.media-folder-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.5rem 0.625rem 0.375rem;
+  border-radius: 0.75rem;
+  text-align: left;
+  color: rgb(var(--c-on-surface));
+  cursor: pointer;
+}
+.media-folder-btn .material-symbols-outlined {
+  font-size: 20px;
+  flex-shrink: 0;
+  color: rgb(var(--c-on-surface-variant));
+}
+.media-folder-btn:focus-visible {
+  outline: 2px solid rgb(var(--c-primary));
+  outline-offset: -2px;
+}
+
+/* Name over count. The name ELLIPSISES, which is the opposite of what it did in the
+   column this replaces: there the card's width was whatever the name needed, so
+   wrapping cost a little height and kept the whole name readable. On a shelf the
+   page size fixes the card's width first, so the name has to be what gives - and the
+   full path is one hover away in the button's title.
+   min-width:0 on both the button and this block is what lets the ellipsis happen at
+   all: a flex item's automatic minimum size is its min-content, and the min-content
+   of a nowrap line is the whole line. */
+.media-folder-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.media-folder-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-folder-count {
+  font-size: 0.6875rem;
+  color: rgb(var(--c-on-surface-variant));
+}
+
+/* The folder's own actions, along the bottom of its card. Quiet until the card is
+   hovered or focused within - three icons on every card at once would be nine icons
+   across a shelf of three folders, and the shelf is for CHOOSING a folder, not for
+   managing it. Always visible below lg, where there is no hover to reveal them.
+   opacity:0 rather than display:none so focus can still reach them: :focus-within
+   reveals the row the moment Tab lands on a button inside it.
+   A SIBLING of .media-folder-btn, never inside it. Two reasons, and the second is
+   load-bearing: a button inside a button is not permitted, and the delegated click
+   handler in js/media.js tests [data-folder] BEFORE the action attributes, so an
+   action button nested inside the card's own button would open the folder instead
+   of renaming it. */
+.media-folder-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin-top: auto;
+  padding: 0 0.375rem 0.3125rem;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+.media-folder-card:hover .media-folder-actions,
+.media-folder-card:focus-within .media-folder-actions {
+  opacity: 1;
+}
+
+.media-folder-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.375rem;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.media-folder-action .material-symbols-outlined { font-size: 17px; }
+.media-folder-action:hover {
+  background: rgb(var(--c-electric-indigo) / 0.12);
+  color: rgb(var(--c-primary));
+}
+.media-folder-action--danger:hover {
+  background: rgb(var(--c-error) / 0.12);
+  color: rgb(var(--c-error));
+}
+.media-folder-action:focus-visible {
+  outline: 2px solid rgb(var(--c-primary));
+  outline-offset: 1px;
+}
+
+.media-folder-empty {
+  padding: 0.75rem 0.375rem;
+  font-size: 0.8125rem;
+  color: rgb(var(--c-on-surface-variant));
+}
+
+
+/* ---------- Folder chips (picker modal) ---------- */
+
+/* The picker navigates one level at a time instead of showing a tree: a modal has no
+   room for a column, and the task there is picking an image, not reorganising. */
+.media-folder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.media-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.3125rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--c-outline-variant));
+  background: var(--glass-wash-1);
+  font-size: 0.75rem;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+.media-chip:hover {
+  border-color: rgb(var(--c-electric-indigo) / 0.55);
+  color: rgb(var(--c-primary));
+}
+/* The selected chip stops looking like glass - that is the point of the state. */
+.media-chip.is-active {
+  background: rgb(var(--c-electric-indigo));
+  border-color: rgb(var(--c-electric-indigo));
+  color: rgb(var(--c-on-primary));
+}
+.media-chip-count {
+  font-size: 0.6875rem;
+  opacity: 0.75;
+}
+
+/* ---------- Breadcrumb ---------- */
+
+.media-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+}
+.media-crumb {
+  color: rgb(var(--c-primary));
+  cursor: pointer;
+  border-radius: 0.25rem;
+}
+.media-crumb:hover { text-decoration: underline; }
+.media-crumb.is-current {
+  color: rgb(var(--c-on-surface));
+  font-weight: 600;
+  cursor: default;
+}
+.media-crumb-sep { color: rgb(var(--c-outline-variant)); }
+
+/* ---------- Embed block in the editor ---------- */
+
+/* Same shape as .rich-embed-frame on the reading page, but sized for the editor
+   column - the author is checking they pasted the right link, not watching. */
+.rt-embed-frame {
+  position: relative;
+  width: 100%;
+  margin-bottom: 0.625rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: rgb(var(--c-surface-container-high));
+  border: 1px solid rgb(var(--c-outline-variant));
+}
+.rt-embed-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* Before a URL resolves. Lists what CAN be pasted: the provider set is not guessable,
+   and finding out from an error after the fact is a worse way to learn it. */
+.rt-embed-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 5.5rem;
+  margin-bottom: 0.625rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px dashed rgb(var(--c-outline-variant));
+  background: rgb(var(--c-surface-container-lowest));
+  color: rgb(var(--c-on-surface-variant));
+  font-size: 0.8125rem;
+  text-align: center;
+}
+.rt-embed-empty .material-symbols-outlined {
+  font-size: 22px;
+  color: rgb(var(--c-primary));
+  flex-shrink: 0;
+}
+
+@media (max-width: 1023px) {
+  /* No hover on a touch screen, so the card actions have to be permanent. */
+  .media-folder-actions { opacity: 1; }
+  .media-folder-btn { min-height: 44px; }
+  .media-folder-action { width: 2.25rem; height: 2.25rem; }
+  /* A finger, not a pointer, and a shelf of 9rem cards is a swipe: two cards to a
+     phone. The floor is 2 so the page numbers below always have something to turn,
+     and the rail's own overflow-x is what absorbs a page that still does not fit. */
+  .media-folder-card { flex-basis: 10.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-folder-card,
+  .media-folder-action,
+  .media-folder-actions,
+  .media-chip {
+    transition: none;
+  }
+}

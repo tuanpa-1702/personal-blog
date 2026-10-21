@@ -1,0 +1,2375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-name="Bảng quản trị">Bảng quản trị - AnonyHT</title>
+<meta name="theme-color" content="#f6f1e7" data-theme-color-dark="#1e1a16">
+<!-- Favicon do admin đặt (Bảng quản trị > Quản lí trang chủ). server/render-html.js
+     điền href từ bảng settings trước khi gửi; giá trị trống hoặc chưa đặt thì bỏ cả thẻ. -->
+<link rel="icon" data-setting-href="favicon">
+<!-- Theme switch. MUST stay here - blocking, in <head>, ahead of the
+     stylesheets - so <html class="dark"> is set before the first paint.
+     Deferring it (or folding it into api.js at the end of <body>) brings back
+     the white flash on every navigation. -->
+<script src="/js/theme.js"></script>
+
+<!-- Fonts. Both families are SELF-HOSTED in /css/fonts.css, which
+     scripts/fetch-fonts.py generates: Inter as the static faces
+     Google serves per unicode-range (latin / latin-ext / vietnamese - the
+     three a page of Vietnamese prose actually selects), Material Symbols as a
+     subset of just the icons in use. Same-origin is the point: the first paint
+     waits on no third party, the faces are discovered while this
+     render-blocking stylesheet parses, and the hashed filenames are what lets
+     server.js serve /fonts/ as immutable for a year.
+     The two font-display values differ because the families fail differently.
+     An icon is a LIGATURE - the markup contains the word "search" and the font
+     turns it into a glyph - so block hides nothing-yet instead of printing the
+     word while the subset arrives. Body text swaps, because its fallback stack
+     is already readable text at the right size.
+     The faces the first paint sets text in are preloaded between the
+     @generated markers below; fetch-fonts.py rewrites their hashed hrefs. -->
+<link href="/css/fonts.css" rel="stylesheet">
+<!-- @font-face alone does not start a download until the layout needs a glyph,
+     which on the icon font means icons stay invisible for an extra round-trip
+     (display:block draws nothing), so the faces the first screen needs are
+     preloaded: the icon subset, plus the body family's 400 in the two
+     unicode-ranges Vietnamese prose is actually set in - latin and vietnamese,
+     which is why two, and why not the 700: body text is the first paint,
+     headings at worst the one after. `crossorigin` is required even
+     same-origin - fonts are always fetched anonymously, and a preload that
+     does not match the mode is simply downloaded twice.
+     The hrefs are hashed and therefore GENERATED - `npm run fetch:fonts`
+     rewrites everything between the markers below. Do not edit them by hand. -->
+<!-- @generated:font-preload -->
+<link as="font" crossorigin href="/fonts/material-symbols-subset.c7d51076.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-latin.3100e775.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-vietnamese.5c66f9e0.woff2" rel="preload" type="font/woff2">
+<!-- /@generated:font-preload -->
+
+<!-- Editorial redesign - see css/editorial.css. Retints this page mostly by
+     ALIASING the shared --c-*/--shadow-*/--glass-*/--brand-gradient tokens
+     (this page's own 1300-line <style> block below is already entirely
+     token-based - a `grep -c "var(--c-"` over it found 121 hits and exactly
+     zero hardcoded colours in an actual rule) rather than editing that block
+     directly - see the alias's own comment. Newsreader is preloaded for the
+     same reason as the two Inter faces above. Not @generated -
+     hand-maintained. -->
+<link as="font" crossorigin href="/fonts/newsreader-n-400-latin.62981321.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/newsreader-n-400-vietnamese.f0dcc979.woff2" rel="preload" type="font/woff2">
+
+<!-- Design tokens, then the utilities. tailwind.css is COMPILED (see
+     tailwind.config.js + `npm run build:css`), replacing
+     <script src="https://cdn.tailwindcss.com">, which was not a stylesheet at
+     all but a 451 KB compiler: it parsed the DOM and only then generated and
+     appended a <style>. Until that finished not one utility existed - including
+     `.hidden`, which common.css does not define - so every element the markup
+     had hidden was painted and the page was a bare stack of unstyled text.
+     That is the other half of the flash.
+     Load order is deliberate: the CDN appended its <style> at the END of
+     <head>, after common.css, so keeping tailwind.css last preserves exactly
+     the cascade the pages were built against. -->
+<link href="/css/common.css" rel="stylesheet">
+<!-- Media library: the grid, uploader and picker. Shared by admin.html
+     (Thư viện tab) and write.html (picker modal) so the two look identical. -->
+<link href="/css/media.css" rel="stylesheet">
+<link href="/css/tailwind.css" rel="stylesheet">
+<style>
+body {
+  background-color: rgb(var(--c-background));
+  min-height: 100vh;
+}
+/* ---------- The left rail: one place, on every tab - and on profile.html too ----------
+   The rail's BOX is not styled here. The sticky offset, the clamp()ed width, the
+   height cap and the inner scroll all live in common.css as .side-rail-aside /
+   .side-rail-content, one rule that this page and profile.html both read, because
+   two private copies of it had already drifted apart: profile capped the height
+   at calc(100vh - 104px) where this page used calc(100vh - 11rem), so the SAME
+   card sat 72px lower on profile, and their widths disagreed by up to 14px
+   between lg and 1279 - 3 of 12 grid columns there, a 15rem-floor clamp() here.
+   The long comment that used to sit here, on why the width is a clamp and why
+   the row needs items-start for sticky to have room to move, went with the rule,
+   to where it now documents both pages at once.
+
+   What stays page-local is only this page's own markup: #admin-app is the flex
+   row the rail sticks inside, and the card's rows are the shared .side-rail /
+   .side-nav-item stack - a vertical rail at every width - with .tab-btn on the
+   six buttons admin.js toggles .active on.
+
+   Also dropped here: a prefers-reduced-motion override setting scroll-behavior
+   back to auto on the rail. Nothing ever set it to smooth, so it was already
+   inert, and the class it targeted no longer exists. */
+
+/* ---------- Overview tab: the frosted-glass recipe ----------
+   The three metric cards, the activity feed and the recent-posts list were
+   .ed-panel and nothing more, and the one decorative element on the tab - the
+   sparkline under each number - was an opaque bg-surface-container block. That
+   block was the same mistake the Users tab's search field used to make: a solid
+   rectangle inside a translucent pane, where the blur stops dead at its edges.
+   The sparklines are gone. They were also describing nothing - the same six
+   hardcoded polyline points on every load, for every account, forever.
+   What replaces the flat card is the recipe the Users tab documents at length
+   above: a WASH of two alphas poured over the pane, an EDGE of --glass-inset
+   catching the upper rim, and DEPTH from the shadows. Every colour is a token, so
+   .dark re-points all of them; no gradient runs between two colour ROLES, for the
+   lighting reason given there. */
+
+/* One surface for all five cards - .ed-panel now carries the actual background/
+   border/radius (see the markup: ed-panel/overview-card/rounded-md|xl became
+   ed-panel), so nothing here sets a background any more. What is left is just
+   the Overview tab's own BEHAVIOUR on top of that shared shell: a hover lift on
+   the three metric cards, and the divider rules a card's own head/body/foot use
+   internally. */
+.stat-card { transition: border-color 0.18s ease, transform 0.18s ease; }
+.stat-card:hover {
+  border-color: rgb(var(--ed-accent) / 0.4);
+  transform: translateY(-1px);
+}
+
+/* The metric's glyph: a plain flat glyph coloured by the one accent token, like
+   every other icon on the site - no gradient-clip, no glass bead. Colour is
+   what --ed-accent is FOR; a second colour channel (a fill-state on top of it)
+   would be a different design language from the rest of the page. */
+.stat-icon {
+  flex-shrink: 0;
+  font-size: 28px;
+  line-height: 1;
+  color: rgb(var(--ed-accent));
+  transition: transform 0.18s ease;
+}
+.stat-card:hover .stat-icon { transform: scale(1.08); }
+
+/* The hairline that separates a card's heading from its body, and a metric's number
+   from its footnote - --ed-divider, the same seam every bordered surface on the
+   site uses. */
+.overview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.875rem;
+  margin-bottom: 0.875rem;
+  border-bottom: 1px solid rgb(var(--ed-divider));
+}
+.stat-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding-top: 0.875rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgb(var(--ed-divider));
+}
+
+/* Footer row of a list card: what is being shown on the left, the page numbers on
+   the right. Only drawn when there is a second page - admin.js hides the whole foot
+   rather than leaving a seam under a list that has nowhere to go. */
+.overview-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-top: 0.875rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid rgb(var(--ed-divider));
+}
+/* Stated twice, and the second one is the rule that matters. `.hidden` lives in
+   tailwind.css, which the <link> order above puts BEFORE this block - deliberately,
+   because this block is where the CDN's own appended <style> used to sit, i.e. last.
+   One class against one class means source order decides, and display:flex would win:
+   both list-card footers would stay on screen showing "0 / 0" under an empty card and
+   a stale count under a fetch error, which is precisely what admin.js hides them to
+   avoid. Two classes beat one - the same move as .user-role-menu[hidden] below. */
+.overview-foot.hidden { display: none; }
+
+/* A recent post row's hover - the same flat tint every hoverable row on the site
+   uses (.ed-dropdown-item:hover, .side-nav-item:hover): a plain surface step, no
+   directional wash. */
+.recent-row { cursor: pointer; transition: background 0.15s ease; }
+.recent-row:hover { background: rgb(var(--ed-surface-low)); }
+
+/* The page numbers themselves are the media library's pills - .media-pager and
+   .media-pager-btn from css/media.css, which this page already loads. Reused
+   deliberately rather than restyled: viewall.html has its own copy of the same pill
+   (`.pager-btn`, "mirrors .media-pager-*") and a third copy here would be three
+   places to keep in step for one object. All four pagers on this page - activity,
+   recent folders, users, and the library grid - are therefore the same control. */
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card,
+  .stat-icon,
+  .recent-row { transition: none; }
+  .stat-card:hover { transform: none; }
+  .stat-card:hover .stat-icon { transform: none; }
+}
+
+/* ---------- Users tab: frosted-glass data table ---------- */
+/* The list is one frosted pane holding a control bar, a real <table>, and a
+   footer, each separated by a hairline seam. Only what Tailwind utilities cannot
+   express lives here - the pills, the role dropdown, the row actions, and the
+   collapse into labelled blocks below 1104px.
+
+   Everything inside the pane is cut from ONE glass recipe, so a filter chip, the
+   search well, the role trigger, its floating menu, the status pill and the
+   raised bands all read as the same material:
+     1. a WASH    --glass-wash-1/2 poured as a 180deg gradient (white over colour
+        on the light theme, a pale film over ink on the dark one), so the pane -
+        and the page glow behind it - keeps showing through instead of being
+        painted over;
+     2. an EDGE   --glass-inset, a 1px inner highlight along the TOP: the light
+        catching the upper rim, which is what makes a shape read as a sheet of
+        glass rather than a flat rectangle. The border that DEFINES each shape is
+        outline-variant, not a glass token - see the note below.
+     3. DEPTH     --shadow-pill for something resting on the pane, --shadow-cta
+        for the one chip that is switched on, --menu-shadow for the dropdown
+        floating over the page.
+
+   Why the borders are INK and not --glass-edge / --c-glass-border, which is what
+   the rest of the site's glass reaches for: stack up what a pill here actually
+   sits on. The page is rgb(250 248 255), .ed-panel adds white at 70%, the band
+   adds its own wash over surface-container-high, and the pill adds white at 55%
+   on top - so by the time you reach the pill's border the surface is ~253/255,
+   and --glass-edge (white at 60%) composites to ~253 as well. The rim and its
+   ground land within about 1% of each other, i.e. there is no rim. The reaction
+   pills on a post solved that by DROPPING the rim altogether (2026-09-11): they
+   are quiet controls in a column of prose, and a vote's own fill is what
+   separates the pressed one from the page. A six-column table of controls cannot
+   get away with that: the chips, the well and the role triggers all have to be
+   findable as separate objects. outline-variant flips with
+   the theme (faint ink on the light page, a value lighter than the band on the
+   dark one), so a 1px hairline stays a hairline in both.
+   Two exceptions, both because the surface behind them is dark enough for white
+   to register: .user-avatar, whose fill is a photo or the brand gradient, and the
+   floating menu, which takes --menu-border like the nav's own dropdown because it
+   can open over anything.
+
+   The LIGHTING is why no gradient here ever runs between two different colour
+   ROLES. Two roles invert between themes: on the light page --c-primary is darker
+   than --c-electric-indigo, so a 180deg ramp from indigo to primary is lit from
+   above - and on the dark page, where primary is the PALER of the two, the very
+   same ramp is lit from below. Every gradient in this block is therefore two
+   ALPHAS of one colour, denser at the top (--glass-wash-2 -> -1 for plain glass,
+   0.2 -> 0.12 of one accent for a tint), which cannot flip because the colour
+   does not change - only how much of it there is. The one solid fill is the
+   selected chip, where the point is that it stops looking like glass.
+
+   Only the floating role menu blurs its own backdrop. Everything else sits
+   inside .ed-panel, whose blur(12px) has already softened the page behind it,
+   so a second backdrop-filter would re-blur an already-blurred composite for no
+   visible gain - and it is not free: an element with a backdrop-filter becomes
+   its own stacking context AND a containing block for fixed-position
+   descendants, which is the very thing the menu leaves the panel to escape.
+
+   Every colour resolves through a THEME TOKEN (see the top of common.css), never
+   a literal. That is not housekeeping: .dark reassigns all of them on <html>, so
+   a hardcoded value silently keeps its light-theme colour on a dark page.
+   The row seams and the band edges are outline-variant at 40% for the same reason
+   the pill borders are, and they match the hairlines in the posts list and the
+   activity feed. The bands read as raised because their wash is BRIGHTER than the
+   pane, not because a border says so.
+   The roles this block draws on:
+     glass-wash-1/2, glass-inset               the material itself
+     outline-variant                           every hairline: seams and rims
+     surface-container-high / -low             the tint under a band / the menu
+     field                                     the recessed well of the filter
+     electric-indigo / primary                 the selected chip, every hover
+     secondary                                 the editor role, the second accent
+     success / error                           an active vs a blocked account
+     brand-gradient + glass-edge               the initials avatar, matching the
+                                               wordmark in the nav */
+
+/* Filter chips: glass pills resting on the pane - a lit top edge, a wash the
+   panel shows through, a hairline rim, and a soft shadow lifting them off it.
+   They used to be the same build as .reaction-btn on a post; the reaction pills
+   dropped their rim on 2026-09-11 - a vote's fill is their only separation from
+   the page - and these kept theirs on purpose, for the reason above: a table of
+   controls needs findable objects. They own their type and colour outright
+   rather than carrying Tailwind border/text utilities, which would fight the
+   hover and active states at equal specificity. */
+/* Flat filter chip - the same idle/active language as viewall.html's
+   .ed-filter-chip/.filter-btn.active and the homepage's .ed-chip--pill: a
+   bordered surface-low pill (4px radius, not a fully-round glass bead), and
+   the active one filled solid black/white rather than tinted. */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 0.875rem;
+  border-radius: 4px;
+  border: 1px solid rgb(var(--ed-divider));
+  background: rgb(var(--ed-surface-low));
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: rgb(var(--ed-ink-soft));
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.user-chip .material-symbols-outlined { font-size: 16px; }
+.user-chip:hover {
+  background: rgb(var(--ed-surface));
+  color: rgb(var(--ed-ink));
+}
+.user-chip.active {
+  background: rgb(var(--ed-primary));
+  border-color: rgb(var(--ed-primary));
+  color: rgb(var(--ed-on-primary));
+}
+.user-chip:focus-visible {
+  outline: 2px solid rgb(var(--ed-accent));
+  outline-offset: 2px;
+}
+
+/* The row the chips rest in, and the reason they stay on ONE line at every
+   width: it scrolls sideways instead of wrapping, so the bar keeps one height
+   and the pills keep one order however narrow the panel gets. The chips need no
+   flex-shrink:0 - a flex item's automatic minimum size is its min-content width,
+   and their `white-space: nowrap` makes that the whole label - so they push into
+   the scroll rather than being squeezed.
+   The padding / negative-margin pair is what keeps that scroller from clipping
+   its own pills. A scroll container clips at its PADDING box on BOTH axes -
+   `overflow-x: auto` computes the visible overflow-y to auto as well - and these
+   pills deliberately draw outside their boxes: a 2px focus ring 2px off the edge
+   (4px out), and --shadow-cta, 0 6px 16px, under the selected one (~14px below,
+   ~8px to the sides). The vertical 14px is free, since the negative margin hands
+   every pixel of it back to the layout and only the band's own padding and the
+   gap below sit in that space. Sideways it is 10px rather than 14: the row
+   stretches that far past the band's padding on each side, and 10 clears the
+   focus ring with room to spare while staying inside the 16px the band has at
+   its narrowest. Either way the chips land exactly where they would with neither
+   declaration - the pair is scrollport, not layout.
+   The scrollbar is hidden rather than styled because the row only overflows on a
+   narrow screen, where the gesture is a swipe - and a horizontal bar would draw
+   across the pills it belongs to. Keyboard access is unaffected: Tab still
+   reaches every chip and scrolls it into view. overscroll-behavior keeps the
+   swipe from chaining into the page's own scroll or a back-navigation. */
+.user-filter-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 0.875rem 0.625rem;
+  margin: -0.875rem -0.625rem;
+  scrollbar-width: none;
+}
+.user-filter-row::-webkit-scrollbar { display: none; }
+
+/* ---- The live filter field ---- */
+/* A recessed well, the counterpart of the raised pills beside it: --c-field is
+   the token for exactly that (a wash of ink on light, of light on ink), and an
+   inner shadow sinks it into the band. It replaces the opaque
+   `bg-surface-container-low` the markup carried, which was the one solid block
+   left inside a translucent panel - the pane's blur ended at its edges.
+   The class exists so the surface lives here with the rest of the glass while
+   the markup keeps only layout and type. Specificity note: @tailwindcss/forms
+   styles bare `input:where([type=search])` - :where() is weightless, so a single
+   class is enough to take back the background, border and radius.
+   `.ed-input` sits on the SAME rule rather than on a copy of it. That is the
+   name the Settings, Email and Media controls use for this exact surface, and a
+   shared selector list is the only thing that stops the two drifting apart - the
+   reason `.glass-panel, .ed-panel` in common.css is written that way too. It
+   covers input, textarea, select and the one <code> block: all four are styled
+   bare by @tailwindcss/forms, and all four with :where(), so one class still
+   outweighs it. */
+.user-search,
+.ed-input {
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  /* background-COLOR, not the `background` shorthand, and that is load-bearing:
+     three of the .ed-input elements are <select>s, and @tailwindcss/forms draws
+     their chevron as `select { background-image: url(data:...) }` at specificity
+     (0,0,1). The shorthand resets every background longhand it does not mention,
+     so `background: var(--c-field)` here would have deleted the arrow from all
+     three popups. The utility this replaced, bg-surface-container-low, compiles to
+     background-color too - which is the only reason the arrow survived until now.
+     Same longhand as `input.field-well` in common.css. */
+  background-color: var(--c-field);
+  box-shadow: inset 0 1px 2px rgb(var(--c-on-surface) / 0.06);
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+/* Radius is deliberately NOT in the shared rule above. .user-search's markup
+   carries no radius utility at all, so it needs one declared here - but every
+   .ed-input in the Settings, Email and Media markup already carries its own
+   (rounded-lg, and rounded-full on the media search, which has to stay a PILL to
+   match the picker modal in write.html, where .input-glass sets no radius and the
+   utility is what shapes it). This <style> loads AFTER tailwind.css, so a radius
+   on the shared selector would beat those utilities at equal specificity and
+   square the pill off. Shape stays in the markup, surface stays here - the same
+   split the comment above draws between layout and type. */
+.user-search { border-radius: 0.5rem; }
+
+/* A <select> also needs room for the chevron @tailwindcss/forms paints at
+   right .5rem, and the markup's px-4 (0,1,0) outranks the forms'
+   select{padding-right:2.5rem} (0,0,1) - so a long option label runs under the
+   arrow and clips at the field edge, hiding it. The recipe owns the padding the
+   control's affordance needs; inputs and textareas keep px-4 on both sides. */
+select.ed-input { padding-right: 2.5rem; }
+
+/* Focus brightens the well and swaps the inner shadow for the site's indigo
+   focus ring, so the field lifts towards the viewer as it takes over. Replaces
+   the `focus:ring-1 focus:border-electric-indigo` pair the markup carried, which
+   drew a 1px ring where every other field on the site glows at 4px. */
+.user-search:focus,
+.ed-input:focus {
+  outline: none;
+  /* The longhand again, for the <select> chevron - a focused dropdown is exactly
+     the moment the arrow matters, since it is what says the field is a popup. */
+  background-color: var(--glass-wash-1);
+  border-color: rgb(var(--c-electric-indigo));
+  box-shadow: var(--shadow-focus);
+}
+/* The magnifier belongs to the field, so it lights up with it rather than
+   staying grey inside a control that is clearly active - the same rule
+   .auth-field:focus-within applies to the auth inputs. The wrapper only gains a
+   class; its `relative w-full` layout utility is untouched. */
+.user-search-field > .material-symbols-outlined,
+.glass-field-wrap > .material-symbols-outlined { transition: color 0.18s ease; }
+.user-search-field:focus-within > .material-symbols-outlined,
+.glass-field-wrap:focus-within > .material-symbols-outlined {
+  color: rgb(var(--c-electric-indigo));
+}
+
+/* ---- Table ---- */
+/* The three raised bands - control bar, table head, footer - share one recipe so
+   they cannot drift apart: a wash BRIGHTER than the pane over a whisper of
+   surface-container-high, which is what makes them read as a layer of glass laid
+   on top rather than a painted stripe. `bg-white/20` and `bg-white/10` used to do
+   this from the markup and stayed white on the dark theme.
+   The markup still says `border-b` / `border-t` - which edge is drawn is
+   structure - and this sets the colour, so the seams match the row hairlines
+   below instead of the invisible glass-border they had. */
+.user-band {
+  background: rgb(var(--ed-surface-low));
+  border-color: rgb(var(--ed-divider));
+}
+.user-table { width: 100%; text-align: left; border-collapse: collapse; }
+.user-table th {
+  padding: 1rem 0.5rem;
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(var(--ed-ink-soft));
+  white-space: nowrap;
+}
+.user-table td { padding: 1rem 0.5rem; vertical-align: middle; }
+/* Row seams, moved here from `divide-y divide-glass-border` on the <tbody>: that
+   utility painted them --c-glass-border, white at 40% on a pane already 70%
+   white, so the light theme had no visible row boundary at all - and its
+   selector outweighs a plain class, so the colour had to leave the markup before
+   this could set it. `tr + tr` also means the loading and error rows - a single
+   full-width <td>, not a .user-row - never get a stray line above them. */
+.user-table tbody tr + tr { border-top: 1px solid rgb(var(--ed-divider)); }
+/* The identity column is why the table used to outgrow its panel: a <td> in an
+   auto-layout table is at least as wide as its max-content, and `truncate` sets
+   white-space: nowrap - so the column grew to the longest email in full and the
+   panel's overflow-hidden ate the actions on the right. Capping the text block
+   caps that max-content, and the ellipsis finally has somewhere to happen. Both
+   lines keep their title attribute, so the full value is still reachable. */
+.user-identity-text { max-width: 11rem; }
+/* `.post-row` joins this rule for the same reason `.ed-input` joins the field
+   above: the Posts tab's rows want the identical film of glass on hover, and a
+   second copy of the gradient is a second thing to keep in step. Unlike
+   `.recent-row` it carries no `cursor: pointer` - on the Posts tab only the inner
+   text block navigates, while the row also holds the edit and delete buttons, so
+   the pointer belongs to that block and not to the whole band. */
+.user-row,
+.post-row,
+.trash-row { transition: background 0.18s ease; }
+/* Hover is another film of the same glass. 90deg rather than 180: a row is wide
+   and shallow, so a vertical ramp across 3.5rem is a flat tone, while one that
+   runs along the row reads as light travelling across it. */
+.user-row:hover,
+.post-row:hover,
+.trash-row:hover { background: rgb(var(--ed-surface-low)); }
+/* A blocked account recedes, but only its identity text: the status cell and
+   the actions ("Bật lại") have to stay obvious. */
+.user-row.is-disabled .user-identity { opacity: 0.62; }
+
+/* The number inside a Thùng rác folder chip. It rides on .user-chip's own inline-flex
+   and gap, so all it adds is the pill: a smaller, tighter one than the chip, because
+   it is a count and not a label, and a second full-size pill inside the first would
+   read as two chips.
+   The error-container pair is the same one the rail's badge wears, and it carries
+   its own contrast - which is what lets one rule serve all three chip states. A
+   badge that inherited the chip's ink would have to be legible on plain glass, on
+   the indigo hover tint AND on the solid indigo of the selected chip; a filled pair
+   of its own is legible on all three without knowing which one it is sitting on.
+   :empty rather than the [hidden] attribute or Tailwind's .hidden: this block loads
+   after tailwind.css, so a `display` rule written here would beat either of them and
+   the badge would refuse to hide. An empty span hiding itself needs no such fight -
+   admin.js writes the number, or writes nothing. */
+.trash-chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.3125rem;
+  border-radius: 9999px;
+  background: rgb(var(--c-error-container));
+  color: rgb(var(--c-on-error-container));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+}
+.trash-chip-count:empty { display: none; }
+
+/* While a restore or a purge is in flight both of that row's buttons are disabled,
+   so a second click cannot fire the same irreversible request twice. Same
+   treatment the auth modal gives its own disabled buttons. */
+.trash-row [data-trash-action]:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+/* Rounded square, like every other avatar on the site (.ed-avatar-btn in the
+   nav, #profile-avatar) - not a circle. --brand-gradient's two stops are both
+   --ed-accent now (electric-indigo and secondary-container are the same
+   alias), so the initials fallback already paints flat rust with no gradient
+   artifact; only the shape and the ring needed fixing. */
+.user-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgb(var(--ed-divider));
+  flex-shrink: 0;
+}
+.user-avatar--initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-gradient);
+  color: rgb(var(--c-on-primary));
+  font-family: var(--font-vi-sans);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ---- Role picker: a custom listbox, not a native <select> ---- */
+/* This was a <select> with appearance:none whose popup the OS drew - so it could
+   never be made of glass at all, and on the dark theme it did not even render
+   dark, because `option { background-color: #ffffff }` overrode what
+   `color-scheme: dark` would have given it. The menu below is ordinary DOM, so it
+   can carry the same wash, edge and `dropdown-in` animation as everything else
+   here. What replaces the native behaviour is spelled out in admin.js:
+   role="listbox" with focus moving into the menu, full keyboard operation, and
+   the menu parented to <body> because `overflow-hidden` on the panel and
+   `overflow-x:auto` on the table's scroller would both clip it.
+   The trigger is the same glass pill as a filter chip, squared off and tinted by
+   role. */
+.user-role {
+  /* The same chevron path the old <select> carried as a background-image, kept
+     here so the trigger and the theme-following mask below share one source. */
+  --chevron-down: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3E%3Cpath d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem 0.375rem 0.625rem;
+  border-radius: 4px;
+  border: 1px solid rgb(var(--ed-divider));
+  background: rgb(var(--ed-surface-low));
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: rgb(var(--ed-ink-soft));
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.user-role .material-symbols-outlined { font-size: 16px; }
+/* The chevron is a MASK painted with currentColor, so it follows each role's own
+   text colour and both themes for free - the inline-SVG background-image it
+   replaces had a fixed grey fill baked into the data URI. */
+.user-role::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: var(--chevron-down) no-repeat center / 14px 14px;
+          mask: var(--chevron-down) no-repeat center / 14px 14px;
+  transition: transform 0.18s ease;
+}
+.user-role[aria-expanded='true']::after { transform: rotate(180deg); }
+/* One tint per role, so the column can be read without parsing words - but
+   the site now has exactly one accent (--ed-accent already IS --c-electric-
+   indigo AND --c-secondary, so tinting both roles by hue the old way would
+   have painted admin and editor the identical colour). Admin - the role that
+   can do the most damage - gets the one accent; editor gets a plain, darker-
+   than-readonly ink instead of a second hue that doesn't exist here; readonly
+   stays the base untinted pill above. */
+.user-role--admin {
+  border-color: rgb(var(--ed-accent) / 0.5);
+  background: rgb(var(--ed-accent-soft));
+  color: rgb(var(--ed-accent));
+}
+.user-role--editor {
+  border-color: rgb(var(--ed-divider));
+  background: rgb(var(--ed-surface));
+  color: rgb(var(--ed-ink));
+  font-weight: 700;
+}
+/* One length for all three roles. The chips used to size to their label, so the
+   column showed Admin, Editor and Readonly as three different objects - and since
+   each role also carries its own tint, the ragged right edge was three colours
+   stepping in and out of line. The column is already as wide as its widest cell
+   (Readonly), so filling the cell equalises every chip to it without writing a
+   width down anywhere: rename a role, or translate the labels, and the column
+   re-sizes and the chips follow. The label takes the slack, which keeps the
+   chevron at the right edge - where a popup's arrow belongs once the trigger has
+   a fixed length, and what makes the equal width read as deliberate.
+   Desktop table only. Below 1104px the row is a labelled card and this cell is a
+   space-between flex row, in which a full-width chip would stretch across it. */
+@media (min-width: 1104px) {
+  .user-role { width: 100%; }
+  /* text-align because a <button> centres its text by default: once the label
+     takes the slack, inheriting that would leave it floating mid-chip between
+     the icon and the chevron. */
+  .user-role > span:last-of-type { flex: 1; text-align: left; }
+}
+.user-role:hover:not(:disabled) { border-color: rgb(var(--ed-accent) / 0.55); }
+.user-role:focus-visible,
+.user-role[aria-expanded='true'] {
+  outline: none;
+  border-color: rgb(var(--ed-accent));
+  box-shadow: var(--shadow-focus);
+}
+/* The signed-in admin's own row: changing it would lock them out of this page.
+   The pill also stops sitting above the surface - a control that cannot be
+   pressed should not look raised. */
+.user-role:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+
+/* ---- The same picker wearing a FIELD's clothes: "Vai trò" in the add-user modal ----
+   A `<select class="ed-input">` sat there. Its closed surface was already the
+   right one - what no amount of CSS could reach was its popup, which the operating
+   system draws: never glass, no hairline of its own, and on the dark theme a white
+   sheet over a navy card (the same `option { background-color }` problem the table's
+   chips were rebuilt to escape). It opens the table's listbox now - ONE #role-menu,
+   shared, because two menus would be two surfaces to keep in step - so the answer to
+   this field is the site's own blurred panel.
+   The trigger keeps the recessed WELL of the three inputs beside it instead of the
+   raised, role-tinted pill of the table. Inside a form the four fields are one
+   material, and a chip floating above them would spend a tint on a single value
+   that the icon and the label already name; the tint earns its place in a column of
+   twenty rows, where it is read before it is parsed. So here the role colours the
+   INK and leaves the surface alone.
+   Geometry is written down here rather than left to utilities in the markup on
+   purpose: this block loads AFTER tailwind.css, so the base .user-role's 12px /
+   0.375rem would beat `text-body-md` and `px-4 py-3` at equal specificity on source
+   order - the utilities would be dead classes that read as live ones. */
+.user-role--field {
+  width: 100%;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  border-color: rgb(var(--ed-divider));
+  /* background-COLOR plus an explicit image:none, not the `background` shorthand:
+     the shorthand would be harmless on a <button>, but this class is the one a
+     future <select> is most likely to be given, and there it would delete the
+     chevron @tailwindcss/forms paints (see .ed-input above). image:none is what
+     actually does the work - it is the base rule's gradient that has to go. */
+  background-color: var(--c-field);
+  background-image: none;
+  box-shadow: inset 0 1px 2px rgb(var(--c-on-surface) / 0.06);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-align: left;
+  color: rgb(var(--c-on-surface));
+}
+/* 18px against 16px of text, where the chip pairs 16px with 12px; the chevron steps
+   up with it so the two ends of a wider field stay balanced. */
+.user-role--field .material-symbols-outlined { font-size: 18px; }
+.user-role--field::after {
+  width: 16px;
+  height: 16px;
+  -webkit-mask: var(--chevron-down) no-repeat center / 16px 16px;
+          mask: var(--chevron-down) no-repeat center / 16px 16px;
+}
+/* The text takes the slack, so the chevron sits at the right edge - the move the
+   desktop table makes, but at every width, because a form field is full width at
+   every width. The ellipsis is the guarantee behind the media query below: with
+   nowrap inherited from .user-role, a label too long for the field would otherwise
+   run under the arrow rather than be cut. */
+.user-role--field > span:last-of-type {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The description the <option> labels carried, so replacing the popup cost the
+   admin nothing: the field still says what a role DOES, not only what it is called.
+   Muted at every role - the tint belongs to the name, and two coloured runs on one
+   line read as two values. */
+.user-role-field-hint { font-weight: 400; color: rgb(var(--ed-ink-faint)); }
+/* Two classes, so these beat both the base .user-role and its --admin/--editor
+   tints, which would otherwise paint the pill's raised gradient back over the well.
+   Readonly needs no rule: the base colour is its colour. */
+.user-role--field.user-role--admin { color: rgb(var(--ed-accent)); }
+.user-role--field.user-role--editor { color: rgb(var(--ed-ink)); font-weight: 700; }
+/* Focus and open land on exactly .ed-input:focus - the well brightens and its
+   inner shadow gives way to the site's 4px ring - so this field behaves like the
+   input above it. Declared after .user-role:focus-visible because the two weigh the
+   same and the pill's --glass-inset would otherwise win: a recessed well lit from
+   above is neither recessed nor raised. */
+.user-role--field:focus-visible,
+.user-role--field[aria-expanded='true'] {
+  background-color: var(--glass-wash-1);
+  background-image: none;
+  box-shadow: var(--shadow-focus);
+}
+/* A phone's modal card is ~280px of content, which leaves the text ~204px against
+   the ~224px "Readonly chỉ đọc & bình luận" needs - the label would be ellipsised
+   mid-phrase. The name is what a closed picker must show; the description is still
+   in the menu it opens, one click away and wide enough for it. */
+@media (max-width: 399px) {
+  .user-role-field-hint { display: none; }
+}
+
+/* The floating role menu - same flat shell as .ed-dropdown-panel (the nav
+   avatar menu, the "Sắp xếp"/"Danh mục" dropdowns on viewall.html): an
+   opaque surface, a hairline border, one soft shadow, no blur. Copied
+   rather than shared because editorial.css loads after this block and a
+   dropdown built at 90 z-index in <body> needs the same recipe regardless
+   of which file states it. Was borrowing --menu-border from common.css's
+   OLD dark-mode value (a navy/indigo-tinted glass panel) via the SAME bug
+   #user-dropdown-menu had before this session fixed it - a translucent
+   glass menu never matched the flat editorial surface once the alias
+   didn't reach --menu-border/--menu-surface. Fixed-position and placed by
+   admin.js. */
+.user-role-menu {
+  position: fixed;
+  z-index: 90;
+  min-width: 11.5rem;
+  padding: 0.375rem;
+  border-radius: 4px;
+  background: rgb(var(--ed-surface-lowest));
+  border: 1px solid rgb(var(--ed-divider));
+  box-shadow: 0 12px 32px rgb(var(--ed-ink) / 0.1);
+  animation: dropdown-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Both dialogs are z-[100] and this menu lives in <body> at 90, so opened from the
+   add-user field it would paint UNDER the scrim it was just clicked out of -
+   invisible, with the trigger stuck at aria-expanded="true" and no way to tell why.
+   One extra class rather than raising the menu for everyone: at 90 it still sits
+   below the nav's own overlays everywhere else. Toggled by openRoleMenu(). */
+.user-role-menu--in-modal { z-index: 110; }
+/* The role menu never needed a scrollbar - three rows always fit. The
+   change-author picker's row count is however many accounts the site has, so
+   its variant of this same shell caps its own height and scrolls internally
+   rather than running off the bottom of the viewport. */
+.user-role-menu--tall { max-height: 16rem; overflow-y: auto; }
+.user-role-menu[hidden] { display: none; }
+.user-role-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border-radius: 4px;
+  background: transparent;
+  font-family: var(--font-vi-sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  color: rgb(var(--ed-ink));
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.user-role-option .material-symbols-outlined {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: rgb(var(--ed-ink-soft));
+}
+/* The role in force, named by aria-selected so the tint and the check mark cannot
+   disagree with what a screen reader announces. It keeps a faint film of its own
+   so the current role is findable without hovering. Declared BEFORE the
+   hover/focus rule below, because the two weigh the same and the later one has to
+   win: hovering the selected option must still light it up like any other. */
+/* The role in force, named by aria-selected so the tint and the check mark
+   cannot disagree with what a screen reader announces - flat surface-low,
+   the same "picked row" language .ed-dropdown-item/.ed-inline-dd-option use
+   elsewhere, not a tinted glass film. Declared before hover/focus so the
+   later rule still wins when hovering the selected option. */
+.user-role-option[aria-selected='true'] {
+  background: rgb(var(--ed-surface-low));
+  color: rgb(var(--ed-ink));
+  font-weight: 600;
+}
+/* Hover and keyboard highlight land on the same look, so arrowing through the
+   menu feels like moving the pointer. Plain :focus rather than a class
+   admin.js has to keep in sync: focus really does move into the menu (the
+   options are tabindex="-1" and the arrow keys call focus() on them). */
+.user-role-option:hover,
+.user-role-option:focus {
+  outline: none;
+  background: rgb(var(--ed-surface-low));
+  color: rgb(var(--ed-ink));
+}
+.user-role-option:hover .material-symbols-outlined,
+.user-role-option:focus .material-symbols-outlined { color: rgb(var(--ed-ink)); }
+/* The mark is a real icon span in every option, revealed by that attribute:
+   `check` is already in the subsetted icon font, and a content:'check'
+   pseudo-element would have to re-declare all four ligature-critical properties
+   (see .material-symbols-outlined in common.css). */
+.user-role-option-check {
+  margin-left: auto;
+  visibility: hidden;
+  color: rgb(var(--ed-accent));
+}
+.user-role-option[aria-selected='true'] .user-role-option-check { visibility: visible; }
+/* The second line ("được viết bài"), the same wording the add-user modal's
+   <option> labels use - both role pickers should describe a role identically. */
+.user-role-option-text { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.user-role-option-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgb(var(--ed-ink-faint));
+}
+
+/* "Bài viết" and "Tài khoản": the two paired cells. Four separate columns did
+   not fit the ~916px content column, so each pair stacks its two facts (count
+   over join date) or sits its two glyphs side by side.
+   Neither needs an alignment rule: .user-table sets text-align: left for the
+   whole table and all six columns now keep it, so a heading always sits over its
+   own values. "Tài khoản" used to be centred and "Thao tác" right-aligned, via a
+   .user-col-marks / .user-cell-marks pair and a Tailwind `text-right` - the two
+   headings then stood away from the column they name. Both are gone, and the
+   classes with them, since that rule was all they carried. */
+.user-facts { display: flex; flex-direction: column; line-height: 1.35; }
+.user-marks { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+/* Status: a lit dot in a glass pill, so the column carries the same material as
+   the chips and the role trigger instead of floating as bare text.
+   The PILL is neutral and only the dot and the label are coloured - a green or red
+   tint behind 12px text would eat contrast that success-text / error need in full,
+   and the state is already told by the dot and the word. The dot's halo is a
+   box-shadow, so it glows without taking any layout. */
+.user-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.625rem 0.25rem 0.5625rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--ed-divider));
+  background: rgb(var(--ed-surface-low));
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: rgb(var(--c-success-text));
+  white-space: nowrap;
+}
+/* --c-success for the dot, not the --c-success-text the label uses: text needs
+   the darker end of the ramp to stay readable, a 6px dot needs the vivid one. */
+.user-state::before {
+  content: '';
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  background: rgb(var(--c-success));
+  box-shadow: 0 0 0 2.5px rgb(var(--c-success) / 0.2);
+}
+/* success-text / error rather than the #10b981 / #ba1a1a pair this had - both are
+   light-theme values, and the tokens carry a lighter green and red for the dark
+   page. */
+.user-state--off { color: rgb(var(--c-error)); }
+.user-state--off::before {
+  background: rgb(var(--c-error));
+  box-shadow: 0 0 0 2.5px rgb(var(--c-error) / 0.2);
+}
+
+/* Row actions: icon buttons, always visible. They used to start at opacity 0 and
+   fade in on row hover, which cost more than it bought: the column read as empty
+   until the pointer arrived, so nothing told you the row could be acted on, and
+   the three rules that patched the holes in that idea (:hover, :focus-within, and
+   a `hover: none` override for touch) meant the buttons were in fact shown in
+   most situations anyway. Showing them outright makes the column honest and drops
+   all three. Each button still lights its own glass pane on hover, which is what
+   marks the one under the pointer.
+   flex-start, like every other column: the group fills the cell, so without it
+   the icons would sit at the far right of whatever width the table hands this
+   column. */
+.user-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.25rem;
+}
+.user-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  border-radius: 3px;
+  color: rgb(var(--ed-ink-soft));
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.user-action .material-symbols-outlined { font-size: 20px; }
+/* Flat tint under the icon on hover - the same .ed-icon-btn:hover recipe as
+   the header's own icon buttons, no inset rim. */
+.user-action:hover {
+  background: rgb(var(--ed-ink) / 0.06);
+  color: rgb(var(--ed-accent));
+}
+.user-action--danger:hover {
+  background: rgb(var(--c-error) / 0.12);
+  color: rgb(var(--c-error));
+}
+.user-action--enable:hover {
+  background: rgb(var(--c-success) / 0.14);
+  color: rgb(var(--c-success-text));
+}
+.user-action:focus-visible {
+  outline: 2px solid rgb(var(--ed-accent));
+  outline-offset: 2px;
+}
+.user-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: transparent;
+  color: rgb(var(--ed-ink-faint));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-chip,
+  .user-search,
+  .user-search-field > .material-symbols-outlined,
+  .user-row,
+  .user-action,
+  .user-role,
+  .user-role::after,
+  .user-role-option { transition: none; }
+  .user-role-menu { animation: none; }
+}
+
+/* Below lg the six columns become one card per account: every cell turns into a
+   full-width block carrying its column heading in ::before, drawn from the
+   data-label the renderer writes.
+   The cut is at a measured 1103px rather than a Tailwind breakpoint: the six
+   columns need 783px at their narrowest, and the content column - max-w-7xl
+   minus the 3/12 sidebar - only reaches that at about 1104px viewport. Cutting
+   at lg (1024px) instead left an 80px band where the table was a table but 59px
+   of it sat behind a scrollbar. */
+@media (max-width: 1103px) {
+  .user-table thead { display: none; }
+  .user-table,
+  .user-table tbody,
+  .user-table tr,
+  .user-table td { display: block; width: 100%; }
+  .user-row { padding: 0.25rem 0 0.75rem; }
+  /* The identity cell is the card's header, so it keeps the plain full-width
+     layout; every other cell gets the label / value pair. */
+  .user-table td { padding: 0.5rem 1rem; }
+  .user-table td[data-label]:not(.user-cell-identity) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .user-table td[data-label]:not(.user-cell-identity)::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-family: var(--font-vi-sans);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgb(var(--c-on-surface-variant));
+  }
+  /* The pointer is a finger here, so every control gets the 44px floor and the
+     icons are spaced further apart. `flex: 1` makes the group take the rest of the
+     labelled row, which is what puts the icons next to their "THAO TÁC" heading -
+     without it the cell's space-between would push a three-icon group to the far
+     edge. The desktop rule already left-aligns them, so that is not repeated. */
+  .user-actions { flex: 1; gap: 0.5rem; }
+  .user-action { min-width: 44px; min-height: 44px; }
+  .user-role,
+  .user-role-option { min-height: 44px; }
+  /* In a labelled row the value sits opposite its heading, so the stacked pair
+     right-aligns instead of keeping the desktop column's left edge. */
+  .user-facts { align-items: flex-end; text-align: right; }
+}
+
+/* ---------- Overview tab: "Hoạt động gần đây" feed ---------- */
+/* One row per event (new comment, or a like/dislike on a post or a comment).
+   The whole row is a link target, so the hover tint has to read as clickable
+   without competing with the recent-posts list beside it. */
+.activity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.activity-row:hover { background: rgb(var(--ed-surface-low)); }
+.activity-row:focus-visible { outline: 2px solid rgb(var(--ed-accent)); outline-offset: 2px; }
+
+/* The kind badge: an avatar with the event icon pinned to its corner, so a row
+   answers "who" and "what" in one glance instead of two. */
+.activity-figure { position: relative; flex-shrink: 0; }
+.activity-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 1px solid rgb(var(--c-outline-variant));
+  background: rgb(var(--c-electric-indigo) / 0.08);
+}
+.activity-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgb(var(--c-surface-container-low));
+  background: rgb(var(--c-electric-indigo) / 0.14);
+  color: rgb(var(--c-primary));
+}
+.activity-badge .material-symbols-outlined {
+  font-size: 11px;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+/* Same colour semantics as the reaction pills on a post: indigo for a like,
+   red for a dislike, so the two surfaces cannot drift apart. */
+.activity-badge--dislike { background: rgb(var(--c-error) / 0.14); color: rgb(var(--c-error)); }
+.activity-badge--comment { background: rgb(var(--c-secondary) / 0.14); color: rgb(var(--c-secondary)); }
+/* A recorded deletion. The same red as a dislike - it is the feed's other
+   "something was lost" event - but a slightly heavier film, because this is the one
+   row that has no destination to click through to and still has to read as an
+   entry rather than as a disabled control. */
+.activity-badge--deleted { background: rgb(var(--c-error) / 0.18); color: rgb(var(--c-error)); }
+
+/* The row a deletion gets. NOT an <a>: the post it names no longer exists, so a
+   link would be a 404 wearing the title of the thing just clicked. Same box as a
+   linked row, minus the affordances - no pointer, no hover tint - so the two kinds
+   line up in the feed and only the clickable one says so. */
+.activity-row--static { cursor: default; }
+.activity-row--static:hover { background: transparent; border-color: transparent; }
+
+/* Quoted comment text. Clamped to two lines: the feed is a glance surface, and
+   an unclamped comment would push the rows below it out of the card. */
+.activity-quote {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 0.125rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgb(var(--c-electric-indigo) / 0.25);
+  color: rgb(var(--c-on-surface-variant));
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+/* The second line of a deletion: "Bài đã đăng · 1.204 lượt xem". Facts about the
+   post that was lost, not words somebody wrote - so no quote bar and no italic,
+   which would both read as somebody's voice. The error tint at three quarters is
+   what ties it to the badge without shouting twice. */
+.activity-note {
+  display: block;
+  margin-top: 0.125rem;
+  color: rgb(var(--c-error) / 0.85);
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-row { transition: none; }
+}
+
+/* Below lg the row is a finger target, so it gets the same 44px floor as the
+   user-tab controls. */
+@media (max-width: 1023px) {
+  .activity-row { min-height: 44px; padding: 0.75rem; }
+}
+
+/* ---------- Settings, Email and Media controls: the same glass, at control scale ----------
+   The three tabs the Overview/Users redesign did not reach. Their SHELLS were
+   already .ed-panel; what sat inside them was not - 28 fields filled with an
+   opaque bg-surface-container-low, 3 buttons with bg-surface-container, a
+   dropzone with bg-surface-container-lowest, two note panels with
+   bg-surface-container-low/50. Every one of them is the thing the Users tab's
+   own comment names: a solid block inside a translucent pane, where the pane's
+   blur stops dead at its edges. On the dark theme --c-surface-container-low is a
+   solid navy, so what read on screen was a painted rectangle on frosted glass.
+
+   Two surfaces, opposites on purpose - the same pairing the Users tab documents
+   between its recessed search well and its raised pills:
+     a FIELD   sinks. --c-field plus an inner shadow, because it is a hole you
+               type into. It lives on the .user-search rule above, shared rather
+               than copied, under the name .ed-input.
+     a CONTROL rises. A wash brighter than the pane, an --glass-inset rim
+               catching the top edge, --shadow-pill for depth. Hover LIFTS it
+               instead of flattening it to a solid fill, which is what
+               hover:bg-surface-variant did - it deleted the glass at the exact
+               spot the pointer was.
+   Every colour is a token, so .dark re-points the lot, and no gradient runs
+   between two colour ROLES. No new Tailwind utilities anywhere in this section:
+   build:css cannot run on this mount, so a utility that is not already compiled
+   would silently do nothing at all.
+
+   One bug is fixed in passing. The Media tab's search field carried
+   class="input-glass", which is defined in write.html's <style> and nowhere
+   else - so on THIS page that class did not exist, media.css's
+   .media-search-wrap sets only layout, and the field fell through to
+   @tailwindcss/forms: an opaque box, flatly white in the dark theme. */
+
+/* Raised control. The hover is .stat-card's, and for the reason given there: 1px
+   up, a deeper shadow, and a rim that turns indigo rather than a background that
+   turns solid. */
+/* Flat outline button - the same shape/behaviour as .ed-btn-outline, kept as
+   its own class only because admin.js/admin.html still address it by this
+   name in ~10 places; no more raised glass (wash, inset, pill shadow, hover
+   lift) than that button gets anywhere else on the site. */
+.glass-btn {
+  border: 1px solid rgb(var(--ed-divider));
+  background: transparent;
+  color: rgb(var(--ed-ink));
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.glass-btn:hover {
+  border-color: rgb(var(--ed-accent));
+  color: rgb(var(--ed-accent));
+}
+/* The destructive variant moves only the rim and the ink to the error role -
+   a button that turned solid red on hover would be a heavier statement than
+   "restore" or "purge" need next to every other flat button on the page. */
+.glass-btn--danger:hover {
+  border-color: rgb(var(--c-error));
+  color: rgb(var(--c-error));
+}
+
+
+/* Image previews. NO --glass-inset here, for the reason .user-avatar--initials
+   gives: an inset shadow on an <img> paints BEHIND the image content, so on a
+   real photo it is spent for nothing. The --glass-edge rim stays, because it
+   sits against a photo and reads as light on glass. The well underneath shows
+   only in the gap before the file loads.
+   No `display` in this rule, and that is load-bearing: all three previews carry
+   .hidden until a file is chosen, this <style> loads AFTER tailwind.css, so a
+   display declared here would outrank .hidden and paint three empty frames on
+   every load of the Settings tab. */
+.glass-preview {
+  border: 1px solid rgb(var(--ed-divider));
+  background: rgb(var(--ed-surface-low));
+}
+
+/* Note panels - the OAuth setup steps and the delegated-consent block. This is
+   the .user-band recipe: a wash BRIGHTER than the pane over a whisper of
+   surface-container-high, which is what makes it read as a layer of glass laid
+   on top rather than as a painted stripe. It replaces
+   bg-surface-container-low/50, which was translucent but FLAT - no rim, no ramp
+   - so it read as a tint on the pane instead of a pane on the pane.
+   No `display`: #email-consent-block carries .hidden and is revealed by JS. */
+.glass-note {
+  border: 1px solid rgb(var(--ed-divider));
+  background: rgb(var(--ed-surface-low));
+}
+
+/* The two "loại email được gửi" toggles. A row you can pick is a control, so it
+   rises on hover the way .glass-btn does - and the hover is a wash running
+   ALONG the row (90deg, the wide-and-shallow case .user-row documents) rather
+   than the flat bg-secondary-container/10 tint the markup carried. */
+.glass-check {
+  border: 1px solid rgb(var(--ed-divider));
+  background: rgb(var(--ed-surface-low));
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.glass-check:hover {
+  border-color: rgb(var(--ed-accent) / 0.4);
+  background: rgb(var(--ed-surface));
+}
+
+/* The draft status pill on the Posts tab. Its published sibling was already a
+   translucent token (bg-tertiary-fixed-dim/20); draft was
+   bg-surface-container-high, a solid chip sitting on a glass card. Same wash the
+   raised controls use, so the two states now differ in HUE instead of differing
+   in one being glass and the other being paint. */
+.status-pill--draft {
+  background: rgb(var(--ed-surface-low));
+  color: rgb(var(--ed-ink-soft));
+}
+
+/* The Email tab's status banner, by ID because there is no other way to reach
+   it: admin.js setEmailBanner() assigns banner.className WHOLESALE, so any class
+   written into the markup is erased the first time the banner is shown. The id
+   survives that assignment.
+   No blur/inset here any more - a flat editorial surface doesn't need either,
+   and the ok/warn colours themselves moved off --c-tertiary-container (never
+   aliased in editorial.css, so it rendered as leftover Material teal) to
+   --ed-accent/--ed-accent-soft in admin.js's setEmailBanner(). */
+
+/* Every control above animates, so reduced motion has to cover the new ones and
+   not just the rows the earlier redesign added. */
+@media (prefers-reduced-motion: reduce) {
+  .glass-btn,
+  .glass-dropzone,
+  .glass-check,
+  .ed-input { transition: none; }
+  .glass-btn:hover,
+  .glass-btn:active { transform: none; }
+}
+
+/* ==========================================================================
+   Notifications tab (#tab-notifications)
+   The same recipe as .activity-row / .activity-badge above, because this is the
+   same kind of row: an avatar with a kind badge, one sentence, a relative time.
+   Every colour goes through a token (see the head of common.css), so the dark
+   theme restyles the whole tab with nothing of its own.
+   ========================================================================== */
+.notification-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  text-align: left;
+  transition: background 0.18s ease;
+}
+a.notification-row:hover { background: rgb(var(--ed-surface-low)); }
+a.notification-row:focus-visible { outline: 2px solid rgb(var(--ed-accent)); outline-offset: -2px; }
+/* Unread: a primary bar on the left edge, NOT a filled background - in a list
+   where every row is tinted, no row is. box-shadow rather than border-left so an
+   unread row and a read one keep identical geometry. And no `display` anywhere in
+   this rule: this <style> block loads after tailwind.css, so a display declared
+   here would out-rank .hidden and the row could never be taken off the page. */
+.notification-row--unread { box-shadow: inset 3px 0 0 rgb(var(--c-primary)); }
+.notification-row--static { cursor: default; }
+
+.notification-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgb(var(--c-surface-container-low));
+  background: rgb(var(--c-electric-indigo) / 0.14);
+  color: rgb(var(--c-primary));
+}
+.notification-badge .material-symbols-outlined {
+  font-size: 11px;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+/* A report is the tab's one "somebody is asking for a decision" event, so it
+   wears the error accent; a hide/unhide is moderation and shares it, lighter. */
+.notification-badge--reported { background: rgb(var(--c-error) / 0.16); color: rgb(var(--c-error)); }
+.notification-badge--hidden { background: rgb(var(--c-error) / 0.1); color: rgb(var(--c-error)); }
+.notification-badge--user { background: rgb(var(--c-tertiary) / 0.16); color: rgb(var(--c-tertiary)); }
+.notification-badge--comment { background: rgb(var(--c-secondary) / 0.14); color: rgb(var(--c-secondary)); }
+
+/* The quoted comment text on a row is .activity-quote, defined above: same
+   two-line clamp, same bar, same italic, and a row here is the same kind of row.
+   Cloning it under a notification name would be a second rule to keep in step. */
+
+/* The three moderation actions on a report row. Quiet text buttons, like the
+   ones a comment carries on the reading page, so a row of them does not out-shout
+   the report itself. */
+.notif-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.375rem;
+  color: rgb(var(--c-on-surface-variant));
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.notif-action-btn:hover { color: rgb(var(--c-primary)); background: rgb(var(--c-primary) / 0.08); }
+.notif-action-btn .material-symbols-outlined { font-size: 16px; }
+.notif-action-btn--danger:hover { color: rgb(var(--c-error)); background: rgb(var(--c-error) / 0.08); }
+
+</style>
+
+<!-- Editorial redesign - see css/editorial.css. Loaded LAST, after the block
+     above: several of its own rules share a selector with one of
+     editorial.css's retint rules at the same specificity (the alias itself is
+     immune to load order - it works by redefining a --c-* variable, not by
+     out-specificity-ing a rule that sets a property directly - but a few
+     explicit overrides, like #related-title's border-bottom-color pattern
+     seen on post.html, are not), so this has to come after to win those ties. -->
+<link href="/css/editorial.css" rel="stylesheet">
+</head>
+<body class="editorial-page font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col pt-16">
+
+<!-- TopNavBar -->
+<nav class="ed-nav fixed top-0 w-full z-50">
+<div class="flex justify-between items-center h-16 px-sm md:px-margin-page w-full max-w-7xl mx-auto gap-6">
+<div class="flex items-center gap-6">
+<button class="ed-icon-btn ed-hamburger-btn flex items-center justify-center p-1.5" type="button" data-action="mobile-nav-toggle" aria-label="Mở menu điều hướng"><span class="material-symbols-outlined">menu</span></button>
+<a class="group inline-flex items-baseline gap-1.5" href="/index.html" id="nav-brand">
+<span class="ed-wordmark" data-brand-name>TuanPA</span>
+</a>
+<div class="ed-nav-links">
+<a class="ed-nav-link" href="/index.html">Trang chủ</a>
+<a class="ed-nav-link" href="/viewall.html">Tất cả bài viết</a>
+<a class="ed-nav-link" href="/about.html">Về tác giả</a>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<div class="relative hidden sm:block" id="header-search-wrap">
+<span class="material-symbols-outlined ed-icon-faint absolute left-3 top-1/2 -translate-y-1/2 text-[16px] pointer-events-none">search</span>
+<input id="search-input" type="text" placeholder="Tìm kiếm bài viết..." aria-label="Tìm kiếm bài viết" class="ed-search pl-8 pr-1 py-1.5 font-body-sm text-body-sm w-40 lg:w-56">
+</div>
+<button class="ed-icon-btn sm:hidden flex items-center justify-center p-2" id="header-search-toggle" title="Tìm kiếm" data-action="search-toggle"><span class="material-symbols-outlined">search</span></button>
+<div class="ed-nav-divider hidden sm:block" aria-hidden="true"></div>
+<div class="relative">
+<button id="nav-avatar-btn" class="ed-avatar-btn overflow-hidden flex items-center justify-center active:scale-95 transition-transform" title="Tài khoản" data-action="nav-dropdown">
+<img alt="Ảnh đại diện" class="w-full h-full object-cover hidden" id="nav-avatar-img">
+<span class="material-symbols-outlined ed-icon-soft text-[18px]" id="nav-avatar-placeholder">person</span>
+</button>
+<div class="ed-dropdown-panel absolute right-0 mt-2 w-56 z-50 hidden origin-top-right" id="user-dropdown-menu"></div>
+</div>
+</div>
+</div>
+</nav>
+
+<!-- Search Overlay -->
+<div class="ed-search-overlay hidden sm:hidden fixed top-16 left-0 w-full z-40" id="search-overlay">
+<div class="max-w-7xl mx-auto px-sm md:px-margin-page py-4 flex items-center gap-4">
+<span class="material-symbols-outlined ed-icon-faint">search</span>
+<input class="ed-search flex-grow min-w-0 border-none py-1 font-body-lg text-body-lg" id="search-input-mobile" placeholder="Tìm kiếm bài viết..." type="text">
+<button class="ed-icon-btn shrink-0 w-11 h-11 flex items-center justify-center" aria-label="Đóng tìm kiếm" data-action="search-close"><span class="material-symbols-outlined">close</span></button>
+</div>
+</div>
+
+<div id="not-admin" class="hidden flex-grow flex-col items-center justify-center gap-4 pb-xl">
+<p class="ed-icon-soft">Bạn cần đăng nhập bằng tài khoản quản trị viên để xem trang này.</p>
+<button class="ed-btn-primary" data-action="auth-open">Đăng nhập</button>
+<a class="ed-link-back underline" href="/index.html">Về trang chủ</a>
+</div>
+
+<main id="admin-app" class="hidden flex-grow max-w-7xl mx-auto w-full px-sm md:px-gutter pt-6 pb-xl flex flex-col lg:flex-row items-start gap-gutter">
+
+<!-- Sidebar Navigation. One fixed place on every tab, and the SAME place
+     profile.html's rail occupies - .side-rail-aside in common.css is the single
+     rule both pages read (sticky at 88px, a clamp()ed width, a capped height that
+     scrolls inside itself), and `items-start` on #admin-app above is what gives
+     sticky room to work. The .side-rail rules in common.css stack the card's rows
+     vertically at every width; below lg the aside is full width, so they sit above
+     the content instead of beside it. -->
+<aside class="side-rail-aside flex flex-col min-w-0">
+<div class="side-rail p-2 lg:p-4 gap-base">
+<!-- Signed-in admin -->
+<div class="side-rail-identity flex items-center gap-3 px-4 pb-3">
+<img alt="Ảnh đại diện quản trị viên" id="admin-avatar" class="w-11 h-11 object-cover" style="border-radius: 6px; border: 1px solid rgb(var(--ed-divider))">
+<div class="min-w-0">
+<p class="font-label-md text-label-md text-on-surface truncate" id="admin-name"></p>
+<p class="font-label-md text-label-md text-outline">Administrator</p>
+</div>
+</div>
+<hr class="border-outline-variant/40 my-1">
+<!-- Site links -->
+<a class="side-nav-item flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md" href="/index.html">
+<span class="material-symbols-outlined">home</span>Trang chủ
+</a>
+<a data-writer-only class="side-nav-item hidden flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md" href="/write.html">
+<span class="material-symbols-outlined">edit_note</span>Viết bài mới
+</a>
+<a class="side-nav-item flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md" href="/profile.html">
+<span class="material-symbols-outlined">person</span>Trang cá nhân
+</a>
+<hr class="border-outline-variant/40 my-1">
+<!-- Tab switchers for this page. admin.js toggles .active on .tab-btn. -->
+<button type="button" data-tab="overview" class="side-nav-item tab-btn w-full text-left flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">dashboard</span>Tổng quan
+</button>
+<!-- The notification inbox. The badge is the UNREAD count, filled by
+     loadNotificationCount() the moment the panel opens - before any tab is
+     clicked, which is why it has its own endpoint, exactly like trash-rail-badge
+     below. Same justify-between plus inner span as the trash row: ml-auto is not
+     in the built tailwind.css and this box cannot rebuild it. -->
+<button type="button" data-tab="notifications" class="side-nav-item tab-btn w-full text-left flex items-center justify-between gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md">
+<span class="flex items-center gap-3"><span class="material-symbols-outlined">notifications</span>Thông báo</span>
+<span id="notif-rail-badge" class="hidden h-5 px-1.5 rounded-full bg-error-container text-on-error-container text-[11px] font-label-md flex items-center justify-center"></span>
+</button>
+<button type="button" data-tab="posts" class="side-nav-item tab-btn w-full text-left flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">edit_document</span>Quản lý bài viết
+</button>
+<button type="button" data-tab="media" class="side-nav-item tab-btn w-full text-left flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">perm_media</span>Thư viện ảnh
+</button>
+<button type="button" data-tab="users" class="side-nav-item tab-btn w-full text-left flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">group</span>Người dùng
+</button>
+<button type="button" data-tab="settings" class="side-nav-item tab-btn w-full text-left flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">home_work</span>Quản lí trang chủ
+</button>
+<button type="button" data-tab="email" class="side-nav-item tab-btn w-full text-left flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">mail</span>Cài đặt email
+</button>
+<!-- The recycle bin. The badge is the total across the four folders, filled by
+     loadTrash(); hidden while zero so an empty bin reads as an ordinary row.
+     justify-between plus an inner span, rather than ml-auto on the badge: ml-auto
+     is not in the built tailwind.css and this box cannot rebuild it. -->
+<button type="button" data-tab="trash" class="side-nav-item tab-btn w-full text-left flex items-center justify-between gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md">
+<span class="flex items-center gap-3"><span class="material-symbols-outlined">delete</span>Thùng rác</span>
+<span id="trash-rail-badge" class="hidden h-5 px-1.5 rounded-full bg-error-container text-on-error-container text-[11px] font-label-md flex items-center justify-center"></span>
+</button>
+<hr class="border-outline-variant/40 my-1">
+<button type="button" class="side-nav-item w-full text-left flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-secondary-container/10 transition-all font-label-md text-label-md" data-action="logout">
+<span class="material-symbols-outlined">logout</span>Đăng xuất
+</button>
+</div>
+</aside>
+
+<!-- Main Content Area. .side-rail-content is the shared half of the rail pair:
+     it takes whatever the rail leaves, on this page and on profile.html alike. -->
+<div class="side-rail-content flex flex-col gap-gutter min-w-0">
+
+<!-- Overview Tab -->
+<section id="tab-overview" class="tab-panel flex flex-col gap-gutter">
+
+<!-- Hero / welcome, mirroring the profile page hero card. The two blurred
+     gradient blobs the reference "Atelier" mockup never had either - a flat
+     masthead like the one on every other redesigned page - are gone, not
+     retinted: an accent-tinted haze is still a haze. -->
+<section class="ed-panel p-6 sm:p-8 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8">
+<div class="flex-1 text-center md:text-left flex flex-col justify-center min-w-0">
+<span class="ed-kicker">Bảng quản trị</span>
+<h1 class="ed-hero-title mt-2 mb-2 break-words">Chào mừng bạn đã trở lại!</h1>
+<p class="ed-dek">Đây là những gì đang diễn ra trên trang của bạn hôm nay.</p>
+</div>
+</section>
+
+<!-- Metrics Grid. Three across only from lg: at tablet width a 3-up row left
+     each card ~220px, which wrapped the "TỔNG LƯỢT XEM" labels onto two lines.
+     Nothing is drawn under the numbers any more. Each card had a sparkline there -
+     an opaque bg-surface-container block holding an <svg> polyline of six hardcoded
+     points, the same six on every load and on every install. It was a solid
+     rectangle inside a translucent pane (the blur stops dead at its edges) in the
+     shape of a trend, showing one. The number, what it counts, and the second fact
+     that used to sit under it are the whole of what the card knows. -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Card 1 -->
+<div class="ed-panel overview-card stat-card p-5 sm:p-6">
+<div class="flex justify-between items-start gap-3">
+<div class="min-w-0">
+<p class="ed-label">Tổng lượt xem</p>
+<h3 class="ed-stat-number mt-1" id="stat-views">-</h3>
+</div>
+<span class="material-symbols-outlined stat-icon">visibility</span>
+</div>
+<p class="stat-foot font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>Tổng hợp toàn bộ bài viết
+</p>
+</div>
+<!-- Card 2 -->
+<div class="ed-panel overview-card stat-card p-5 sm:p-6">
+<div class="flex justify-between items-start gap-3">
+<div class="min-w-0">
+<p class="ed-label">Bài đã đăng</p>
+<h3 class="ed-stat-number mt-1" id="stat-published">-</h3>
+</div>
+<span class="material-symbols-outlined stat-icon">article</span>
+</div>
+<p class="stat-foot font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">draft</span><span id="stat-draft">-</span>
+</p>
+</div>
+<!-- Card 3 -->
+<div class="ed-panel overview-card stat-card p-5 sm:p-6">
+<div class="flex justify-between items-start gap-3">
+<div class="min-w-0">
+<p class="ed-label">Nhận thông báo</p>
+<h3 class="ed-stat-number mt-1" id="stat-subs">-</h3>
+</div>
+<span class="material-symbols-outlined stat-icon">notifications_active</span>
+</div>
+<p class="stat-foot font-body-sm text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">person</span><span id="stat-users">-</span>
+</p>
+</div>
+</section>
+
+<!-- Bottom Grid: Recent activity & Recent posts -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-gutter flex-1">
+<!-- Recent activity: new comments, like/dislike votes, and recorded post
+     deletions, newest first. Ten rows and a numbered pager - the card is a glance
+     surface, and an unbounded feed pushed the recent-posts list beside it off the
+     first screen once anybody had commented a few times. -->
+<div class="lg:col-span-5 ed-panel overview-card p-5 sm:p-6 flex flex-col">
+<div class="overview-head">
+<h3 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-electric-indigo">notifications_active</span>Hoạt động gần đây
+</h3>
+<button type="button" id="activity-refresh-btn" class="tap-target p-1 -mr-1 rounded-lg text-electric-indigo hover:bg-primary-container/10 transition-colors" title="Tải lại hoạt động" aria-label="Tải lại hoạt động">
+<span class="material-symbols-outlined text-[20px]">refresh</span>
+</button>
+</div>
+<div class="flex flex-col gap-1 flex-1 -mx-1" id="activity-list" aria-live="polite">
+<p class="p-3 font-body-sm text-body-sm text-on-surface-variant">Đang tải...</p>
+</div>
+<!-- Hidden until there is a second page: one page of ten with numbers under it
+     would be a control that does nothing. admin.js toggles it. -->
+<div class="overview-foot hidden" id="activity-foot">
+<span class="font-body-sm text-body-sm text-on-surface-variant" id="activity-range"></span>
+<nav class="media-pager hidden" id="activity-pager" aria-label="Chuyển trang hoạt động"></nav>
+</div>
+</div>
+<!-- Recent posts: the ten newest, published or draft. No pager - the "Quản lý bài
+     viết" tab is the whole list, and "Xem tất cả" goes to it. -->
+<div class="lg:col-span-7 ed-panel overview-card p-5 sm:p-6 flex flex-col">
+<div class="overview-head">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Bài viết gần đây</h3>
+<button type="button" id="recent-posts-view-all-btn" class="tap-target px-1 text-electric-indigo font-label-md text-label-md hover:underline cursor-pointer">Xem tất cả</button>
+</div>
+<div class="flex flex-col divide-y divide-outline-variant/40 -mx-5 sm:-mx-6 flex-1" id="recent-posts-list"></div>
+<div class="overview-foot hidden" id="recent-posts-foot">
+<span class="font-body-sm text-body-sm text-on-surface-variant" id="recent-posts-range"></span>
+</div>
+</div>
+</section>
+</section>
+
+<!-- Posts Tab -->
+<section id="tab-posts" class="tab-panel hidden flex flex-col gap-gutter">
+<div class="flex justify-between items-center flex-wrap gap-4">
+<div>
+<h2 class="ed-section-title">Quản lý bài viết</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Sửa, xoá và theo dõi toàn bộ bài viết trên trang.</p>
+</div>
+<a href="/write.html" class="ed-btn-primary tap-target">+ Bài viết mới</a>
+</div>
+<div class="ed-panel rounded-xl overflow-hidden">
+<div class="divide-y divide-outline-variant/40" id="all-posts-list">
+<p class="p-6 text-on-surface-variant">Đang tải...</p>
+</div>
+</div>
+</section>
+
+<!-- Media Library Tab -->
+<!-- The grid, its uploader and the detail panel. The same grid markup is reused by
+     the picker modal in write.html (both styled from /css/media.css and driven by
+     /js/media.js), so browsing the library and picking from it look identical. -->
+<section id="tab-media" class="tab-panel hidden flex flex-col gap-gutter">
+
+<div class="ed-panel rounded-xl p-6 sm:p-8 flex flex-col gap-4">
+<div class="flex flex-wrap items-start justify-between gap-3">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Thư viện ảnh</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Ảnh dùng cho bài viết. Kéo ảnh vào khung dưới hoặc bấm để chọn file.</p>
+</div>
+<!-- Re-reads public/uploads and reconciles it with the database. The same pass
+     runs at every boot; this is for after files were added or removed over SSH. -->
+<button type="button" id="media-sync-btn" class="glass-btn tap-target px-4 py-2 rounded-lg font-label-md text-label-md uppercase text-on-surface-variant">
+<span class="material-symbols-outlined media-btn-icon">sync</span>Đồng bộ
+</button>
+</div>
+
+<!-- Uploader. A <label> around a hidden input, so a click browses and a drop
+     uploads, both on the same target. -->
+<label id="media-dropzone" class="media-dropzone">
+<span class="material-symbols-outlined text-[28px]" aria-hidden="true">cloud_upload</span>
+<span class="font-label-md text-label-md uppercase">Kéo ảnh vào đây hoặc bấm để chọn</span>
+<span id="media-upload-hint" class="font-body-sm text-body-sm text-on-surface-variant">JPG, PNG, WEBP, GIF</span>
+<input type="file" id="media-file-input" class="hidden" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+</label>
+
+<div id="media-progress" class="media-progress hidden">
+<div class="media-progress-track"><div id="media-progress-fill" class="media-progress-fill"></div></div>
+<p id="media-progress-label" class="media-progress-label font-body-sm text-body-sm"></p>
+</div>
+<p id="media-upload-error" class="hidden font-body-sm text-body-sm text-error"></p>
+</div>
+
+<!-- Folder shelf. ABOVE the library and sideways, where it was a 13rem column to
+     the left of the grid - the one arrangement that cannot show a row of folders,
+     since a narrow column is a list, and the thumbnails paid 232px of width for it.
+     Across the full tab the names sit beside their icons and the grid gets the whole
+     column back.
+     A shelf holds about six cards, so the folders are PAGED with the same numbered
+     pills the grid below uses rather than left to scroll: a rail you have to drag
+     sideways says nothing about how much is off the end of it, and offers no way to
+     jump to the last one. -->
+<div class="ed-panel rounded-xl p-4 sm:p-6 flex flex-col gap-3 min-w-0">
+<div class="flex items-start justify-between gap-3">
+<div class="min-w-0">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Thư mục</h4>
+<!-- "Tất cả ảnh" and "Chưa phân loại" are views rather than rows in media_folders,
+     so js/media.js writes those two cards itself and pages the real folders after
+     them. This line counts what the shelf is holding. -->
+<p class="font-body-sm text-body-sm text-on-surface-variant" id="media-folder-summary"></p>
+</div>
+<button type="button" id="media-new-folder" class="media-folder-action" title="Thư mục mới" aria-label="Tạo thư mục mới">
+<span class="material-symbols-outlined" aria-hidden="true">create_new_folder</span>
+</button>
+</div>
+<div id="media-folders" class="media-folder-rail"></div>
+<nav id="media-folder-pager" class="media-pager hidden" aria-label="Chuyển trang thư mục"></nav>
+</div>
+
+<div class="media-layout">
+<!-- Grid + its filters. media-grid-panel switches the frosted-glass blur OFF for
+     this one card - a backdrop-filter re-rasterizes every frame of a scroll, and
+     this card holds the whole scrolling library. See media.css. -->
+<div class="ed-panel media-grid-panel rounded-xl p-6 sm:p-8 flex flex-col gap-4 min-w-0">
+<nav id="media-breadcrumb" class="media-breadcrumb hidden" aria-label="Đường dẫn thư mục"></nav>
+<div class="flex flex-wrap items-center gap-3 justify-between">
+<div class="glass-field-wrap media-search-wrap">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">search</span>
+<input type="text" id="media-search" placeholder="Tìm theo tên file..." aria-label="Tìm ảnh trong thư viện" class="ed-input w-full pl-10 pr-4 py-2 font-body-sm text-body-sm text-on-surface" style="border-radius: 4px">
+</div>
+<label class="flex items-center gap-2 cursor-pointer font-body-sm text-body-sm text-on-surface-variant">
+<input type="checkbox" id="media-mine-only" class="accent-electric-indigo">
+Chỉ ảnh của tôi
+</label>
+</div>
+
+<!-- View modes: how the grid below lays images out. The choice is remembered in
+     localStorage by js/media.js, so it is a preference, not a per-visit state. -->
+<div class="media-toolbar">
+<span id="media-view-label" class="font-body-sm text-body-sm text-on-surface-variant">Kiểu xem</span>
+<div class="media-view-toggle" role="group" aria-labelledby="media-view-label">
+<button type="button" class="media-view-btn" data-media-view="small" title="Ô nhỏ" aria-label="Xem dạng ô nhỏ" aria-pressed="false">
+<span class="material-symbols-outlined" aria-hidden="true">grid_view</span>
+</button>
+<button type="button" class="media-view-btn" data-media-view="medium" title="Ô vừa" aria-label="Xem dạng ô vừa" aria-pressed="false">
+<span class="material-symbols-outlined" aria-hidden="true">grid_guides</span>
+</button>
+<button type="button" class="media-view-btn" data-media-view="large" title="Ô lớn" aria-label="Xem dạng ô lớn" aria-pressed="false">
+<span class="material-symbols-outlined" aria-hidden="true">view_module</span>
+</button>
+<button type="button" class="media-view-btn" data-media-view="list" title="Danh sách" aria-label="Xem dạng danh sách" aria-pressed="false">
+<span class="material-symbols-outlined" aria-hidden="true">view_list</span>
+</button>
+</div>
+</div>
+
+<p id="media-totals" class="font-body-sm text-body-sm text-on-surface-variant"></p>
+
+<div id="media-grid" class="media-grid">
+<p class="media-empty">Đang tải thư viện...</p>
+</div>
+
+<nav id="media-pager" class="media-pager hidden" aria-label="Chuyển trang"></nav>
+</div>
+
+<!-- Detail panel. Hidden until a card is clicked; sits beside the grid rather
+     than over it, so working through several images is not a dialog each time. -->
+<div id="media-detail" class="media-detail hidden">
+<div class="flex items-start justify-between gap-3">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Chi tiết ảnh</h4>
+<button type="button" id="media-detail-close" aria-label="Đóng chi tiết" class="ed-icon-btn tap-target w-9 h-9 flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+
+<img id="media-detail-img" class="media-detail-preview" alt="">
+
+<p id="media-detail-name" class="font-body-md text-body-md font-semibold text-on-surface break-words"></p>
+
+<dl class="flex flex-col gap-1.5">
+<div class="media-detail-row"><dt>Kích thước</dt><dd id="media-detail-facts"></dd></div>
+<div class="media-detail-row"><dt>Thư mục</dt><dd id="media-detail-folder"></dd></div>
+<div class="media-detail-row"><dt>Người tải lên</dt><dd id="media-detail-uploader"></dd></div>
+<div class="media-detail-row"><dt>Thời gian</dt><dd id="media-detail-date"></dd></div>
+</dl>
+
+<!-- Moving the image into a folder. A custom listbox, not a native <select>: the
+     popup the OS draws for a <select> can never be glass, so the trigger and its
+     menu are ordinary DOM cut from the site's recipe - the menu floats over the
+     page, built and parented to <body> by js/media.js, blurred like the Users
+     tab's role menu. Each option is a folder's full path, since two folders at
+     different depths can share a name. -->
+<button type="button" id="media-move-folder" class="media-move-trigger"
+        aria-haspopup="listbox" aria-expanded="false" aria-controls="media-move-menu">
+<span class="material-symbols-outlined" aria-hidden="true">folder</span>
+<span class="media-move-text">Chuyển vào thư mục...</span>
+</button>
+
+<div class="flex flex-col gap-1.5">
+<label for="media-detail-url" class="ed-label">Đường dẫn</label>
+<!-- One recessed glass well holding the readonly URL and its copy pill (media.css).
+     The button's text sits in a span so media.js can swap it for the confirmation
+     without rebuilding the button. -->
+<div class="media-url-field">
+<input id="media-detail-url" type="text" readonly class="media-url-input">
+<button type="button" id="media-copy-url" class="media-copy-btn tap-target"><span class="media-copy-label">Copy</span></button>
+</div>
+</div>
+
+<!-- Usage warning lands here before the delete is armed: the count of posts using
+     this image is something only the server knows, so it is fetched on the first
+     click and the button then asks for confirmation. -->
+<p id="media-detail-usage" class="font-body-sm text-body-sm text-on-surface-variant"></p>
+
+<button type="button" id="media-delete-btn" class="tap-target w-full px-4 py-2.5 rounded-xl font-label-md text-label-md uppercase text-on-error-container bg-error-container hover:opacity-90 transition-opacity">Xoá ảnh</button>
+</div>
+
+</div>
+</section>
+
+<!-- Users Tab -->
+<section id="tab-users" class="tab-panel hidden flex flex-col gap-gutter">
+<div class="flex justify-between items-center flex-wrap gap-4">
+<div>
+<h2 class="ed-section-title">Người dùng</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Phân quyền và quản lý tài khoản truy cập.</p>
+</div>
+<button type="button" id="add-user-open-btn" class="ed-btn-primary tap-target">+ Thêm người dùng</button>
+</div>
+
+<!-- List: one frosted panel holding the control bar, the table and its footer.
+     Filtering AND paging are both client-side over the list already loaded, so
+     neither makes a request: a keystroke in the search box stays instant, and
+     turning a page cannot fail. -->
+<div class="ed-panel rounded-xl flex flex-col overflow-hidden">
+
+<!-- Control bar: two stacked rows, the chips above the search. They were one
+     row splitting left/right from md, which is exactly where the chips lost their
+     line: the five pills and the "Bộ lọc" label need about 430px, the field beside
+     them is 20rem, and at 768px the panel is not wide enough for both - so the
+     flex-wrap they carried folded them onto a second line. Stacking keeps the
+     filters on ONE line at every width - .user-filter-row scrolls sideways rather
+     than wrapping - and gives the field the full panel width below it, which is
+     also the order the two are used in: pick the set, then narrow it by name.
+     The bar therefore never changes direction, so there is no md: cut left here
+     - the only responsive step is the label hiding itself below sm. -->
+<div class="user-band p-4 sm:p-6 border-b flex flex-col gap-4">
+<div class="flex items-center gap-2 user-filter-row" id="user-filter-chips" role="group" aria-label="Lọc người dùng">
+<span class="hidden sm:inline-flex items-center gap-1.5 pr-1 ed-label shrink-0" aria-hidden="true">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>Bộ lọc
+</span>
+<button type="button" data-filter="all" class="user-chip tap-target active">Tất cả</button>
+<button type="button" data-filter="admin" class="user-chip tap-target">Admin</button>
+<button type="button" data-filter="editor" class="user-chip tap-target">Editor</button>
+<button type="button" data-filter="readonly" class="user-chip tap-target">Readonly</button>
+<button type="button" data-filter="disabled" class="user-chip tap-target">
+<span class="material-symbols-outlined">block</span>Đã vô hiệu
+</button>
+</div>
+<div class="user-search-field relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">search</span>
+<input id="user-search" type="search" placeholder="Tìm theo tên hoặc email..." class="user-search w-full py-2.5 pl-10 pr-4 font-body-sm text-body-sm text-on-surface placeholder:text-outline">
+</div>
+</div>
+
+<!-- admin.js renders one <tr> per account into #users-list. On a narrow screen
+     the .user-table rules turn each row into a labelled card (see the <style>).
+     Six columns, not the eight this started with: at ~916px of content column
+     (max-w-7xl minus the sidebar) eight of them needed 1182px, and the panel's
+     overflow-hidden silently cut the actions off the right edge. Nothing was
+     dropped - "Bài viết" carries the post count over the join date, and
+     "Tài khoản" the sign-in method beside the notification state. The heading is
+     "Bài viết" rather than "Hoạt động" because the status column one over
+     already uses that word for a live account. -->
+<div class="w-full overflow-x-auto">
+<table class="user-table">
+<thead>
+<tr class="user-band border-b">
+<th scope="col">Người dùng</th>
+<th scope="col">Vai trò</th>
+<th scope="col">Trạng thái</th>
+<th scope="col">Bài viết</th>
+<th scope="col">Tài khoản</th>
+<th scope="col">Thao tác</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm" id="users-list" aria-live="polite">
+<tr><td class="text-on-surface-variant" colspan="6">Đang tải...</td></tr>
+</tbody>
+</table>
+</div>
+<p id="users-empty" class="hidden p-8 text-center font-body-md text-body-md text-on-surface-variant">Không có người dùng nào khớp với bộ lọc.</p>
+
+<!-- Footer: what the filters left, and the page numbers. Ten accounts a page, like
+     the two lists on Tổng quan - a table of forty rows inside a card with its own
+     scrollbar is forty rows of hunting, and the row you wanted is never where you
+     left it. The pills are the library's (.media-pager, css/media.css), reused so
+     every pager on this page is the same control; see the note in the <style>. -->
+<div class="user-band p-4 border-t flex flex-wrap items-center justify-between gap-3">
+<span class="font-body-sm text-body-sm text-on-surface-variant" id="users-count"></span>
+<nav class="media-pager hidden" id="users-pager" aria-label="Chuyển trang người dùng"></nav>
+</div>
+</div>
+</section>
+
+<!-- Settings Tab -->
+<section id="tab-settings" class="tab-panel hidden flex flex-col gap-gutter">
+<div class="ed-panel rounded-xl p-6 sm:p-8">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-1">Quản lí trang chủ</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6">Chỉnh sửa các nội dung hiển thị trên trang chủ (tiêu đề, tagline, chân trang...).</p>
+<form id="settings-form" class="flex flex-col gap-4 max-w-xl">
+<div class="flex flex-col gap-2">
+<label for="settings-brand_name" class="ed-label">Tên thương hiệu (logo góc trái)</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Áp dụng cho logo ở mọi trang và tên người gửi trong email thông báo.</p>
+<input id="settings-brand_name" name="brand_name" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-site_title" class="ed-label">Tiêu đề trang (tab trình duyệt)</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Để trống để dùng luôn tên thương hiệu ở trên.</p>
+<input id="settings-site_title" name="site_title" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-favicon" class="ed-label">Favicon (icon trên tab trình duyệt)</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Gợi ý: ảnh vuông PNG nền trong suốt, 512×512 px — trình duyệt tự co nhỏ cho mọi vị trí (tab, bookmark, màn hình chính điện thoại); tối thiểu 32×32 px. Để trống để dùng icon mặc định của trình duyệt.</p>
+<img id="favicon-preview" class="glass-preview h-16 w-16 rounded-lg hidden" style="object-fit:contain" alt="Xem trước favicon">
+<div class="flex flex-wrap gap-2 items-center">
+<!-- NOT type="url", so site-relative
+     /uploads/... paths do not block the settings form from submitting. -->
+<input name="favicon" id="settings-favicon" type="text" placeholder="https://... hoặc /uploads/..." class="ed-input flex-1 min-w-0 px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface">
+<button type="button" id="favicon-upload-btn" class="glass-btn tap-target px-4 py-3 rounded-lg font-label-md text-label-md uppercase text-primary whitespace-nowrap flex items-center gap-2"><span class="material-symbols-outlined" style="font-size:18px" aria-hidden="true">cloud_upload</span>Tải lên</button>
+<input type="file" id="favicon-file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+<button type="button" id="favicon-clear" class="glass-btn glass-btn--danger px-4 py-3 rounded-lg text-on-surface-variant font-label-md text-label-md whitespace-nowrap">Xoá icon</button>
+</div>
+<p id="favicon-status" class="text-sm text-on-surface-variant hidden"></p>
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-meta_description" class="ed-label">Mô tả SEO (Google)</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Đoạn chú thích hiện bên dưới tên site trên kết quả tìm kiếm Google, thay vì Google tự lấy đại một đoạn trích bài viết mới nhất. Khác với ô tagline phía trên - nên viết đầy đủ câu, khoảng 150-160 ký tự.</p>
+<textarea id="settings-meta_description" name="meta_description" rows="3" class="ed-input w-full px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface resize-none"></textarea>
+</div>
+<div class="flex flex-col gap-3 pt-2 border-t border-outline-variant/40">
+<div>
+<label class="ed-label">Về tác giả</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Hiện ở trang "Về tác giả" (link trong header mọi trang). Để trống tên thì cả trang này coi như chưa thiết lập.</p>
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-author_photo" class="ed-label">Ảnh tác giả</label>
+<img id="author-photo-preview" class="glass-preview w-24 h-24 rounded-xl object-cover hidden" alt="Xem trước ảnh tác giả">
+<div class="flex flex-wrap gap-2 items-center">
+<!-- NOT type="url", so a
+     site-relative /uploads/... path pasted in does not block the whole
+     settings form from submitting. -->
+<input name="author_photo" id="settings-author_photo" type="text" placeholder="https://... hoặc /uploads/..." class="ed-input flex-1 min-w-0 px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface">
+<button type="button" id="author-photo-clear" class="glass-btn glass-btn--danger px-4 py-3 rounded-lg text-on-surface-variant font-label-md text-label-md whitespace-nowrap">Xoá ảnh</button>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-author_name" class="ed-label">Tên tác giả</label>
+<input id="settings-author_name" name="author_name" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-author_bio" class="ed-label">Giới thiệu</label>
+<textarea id="settings-author_bio" name="author_bio" rows="4" class="ed-input w-full px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface resize-none"></textarea>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div class="flex flex-col gap-2">
+<label for="settings-author_facebook" class="ed-label">Facebook</label>
+<input id="settings-author_facebook" name="author_facebook" type="text" placeholder="https://facebook.com/..." class="ed-input w-full px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-author_instagram" class="ed-label">Instagram</label>
+<input id="settings-author_instagram" name="author_instagram" type="text" placeholder="https://instagram.com/..." class="ed-input w-full px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-author_youtube" class="ed-label">YouTube</label>
+<input id="settings-author_youtube" name="author_youtube" type="text" placeholder="https://youtube.com/@..." class="ed-input w-full px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-author_tiktok" class="ed-label">TikTok</label>
+<input id="settings-author_tiktok" name="author_tiktok" type="text" placeholder="https://tiktok.com/@..." class="ed-input w-full px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-author_website" class="ed-label">Website</label>
+<input id="settings-author_website" name="author_website" type="text" placeholder="https://..." class="ed-input w-full px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface">
+</div>
+</div>
+<!-- No separate "email" field here - author contact is the social links
+     above (Facebook/Instagram/YouTube/TikTok/Website), not an email address.
+     contact_email below is a different thing entirely: where ADMIN
+     notifications go, not anything a reader ever sees. -->
+</div>
+<div class="flex flex-col gap-2 pt-2 border-t border-outline-variant/40">
+<label for="settings-contact_email" class="ed-label">Email liên hệ</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Không hiện công khai ở đâu trên site (trang "Điều khoản sử dụng" đã được bỏ) - chỉ dùng nội bộ làm địa chỉ nhận các email thông báo cho admin (Admin &gt; Thông báo): bình luận mới, báo cáo bình luận, người dùng mới đăng ký...</p>
+<input id="settings-contact_email" name="contact_email" type="email" placeholder="admin@example.com" autocomplete="off" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="settings-footer_text" class="ed-label">Chữ chân trang (sau © năm)</label>
+<input id="settings-footer_text" name="footer_text" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex gap-4 justify-end mt-2">
+<button type="submit" class="ed-btn-primary tap-target">Lưu cài đặt</button>
+</div>
+<p id="settings-message" class="text-sm text-tertiary-container hidden"></p>
+</form>
+</div>
+</section>
+
+<!-- Email Settings Tab -->
+<section id="tab-email" class="tab-panel hidden flex flex-col gap-gutter">
+<div class="ed-panel rounded-xl p-6 sm:p-8">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-electric-indigo">mail</span>Cài đặt email
+</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6">Cấu hình hộp thư dùng để gửi <b>thông báo bài viết mới</b> và <b>mã OTP khi người dùng quên mật khẩu</b>. Hỗ trợ Gmail, Office 365 hoặc máy chủ SMTP tuỳ chỉnh.</p>
+
+<div id="email-status-banner" class="hidden mb-6 rounded-xl border p-4 flex items-start gap-3">
+<span class="material-symbols-outlined flex-shrink-0" id="email-status-icon">info</span>
+<p class="font-body-sm text-body-sm" id="email-status-text"></p>
+</div>
+
+<form id="email-settings-form" class="flex flex-col gap-5 max-w-xl">
+
+<!-- Provider -->
+<div class="flex flex-col gap-2">
+<label for="email-provider" class="ed-label">Nhà cung cấp</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Chọn Gmail hoặc Office 365 để tự điền máy chủ và cổng. Tài khoản cơ quan/trường học thường không tạo được App Password &mdash; dùng <b>OAuth2</b>. Chọn "Tuỳ chỉnh" nếu dùng SMTP riêng.</p>
+<select id="email-provider" name="provider" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+<option value="gmail">Google Gmail / Google Workspace (smtp.gmail.com:465)</option>
+<option value="office365">Microsoft Office 365 / Outlook (smtp.office365.com:587)</option>
+<option value="office365-oauth">Microsoft Office 365 - OAuth2 app-only (cần quyền Exchange PowerShell)</option>
+<option value="office365-oauth-delegated">Microsoft Office 365 - OAuth2 đăng nhập một lần (không cần Exchange PowerShell)</option>
+<option value="custom">Máy chủ SMTP tuỳ chỉnh</option>
+</select>
+</div>
+
+<!-- Custom host/port/TLS - only shown for provider = custom -->
+<div id="email-custom-fields" class="hidden flex-col gap-5">
+<div class="flex flex-col gap-2">
+<label for="email-host" class="ed-label">Máy chủ SMTP</label>
+<input id="email-host" name="host" placeholder="smtp.example.com" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<label for="email-port" class="ed-label">Cổng</label>
+<input id="email-port" name="port" type="number" min="1" max="65535" placeholder="587" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="email-secure" class="ed-label">Bảo mật</label>
+<select id="email-secure" name="secure" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+<option value="1">SSL/TLS trực tiếp (thường cổng 465)</option>
+<option value="0">STARTTLS (thường cổng 587)</option>
+</select>
+</div>
+</div>
+</div>
+
+<!-- Credentials -->
+<div class="flex flex-col gap-2">
+<label for="email-user" class="ed-label">Tài khoản gửi (email đăng nhập SMTP)</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1" id="email-user-hint"></p>
+<input id="email-user" name="user" type="email" autocomplete="username" placeholder="ten-cua-ban@gmail.com" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+
+<div id="email-password-field" class="flex flex-col gap-2">
+<label for="email-pass" class="ed-label">Mật khẩu ứng dụng (App Password)</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1" id="email-pass-hint"></p>
+<div class="flex flex-wrap gap-2 items-center">
+<input id="email-pass" name="pass" type="password" autocomplete="new-password" class="ed-input flex-1 min-w-0 px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+<button type="button" id="email-pass-toggle" class="glass-btn px-4 py-3 rounded-lg text-on-surface-variant" title="Hiện/ẩn mật khẩu"><span class="material-symbols-outlined">visibility</span></button>
+<button type="button" id="email-pass-clear" class="glass-btn glass-btn--danger px-4 py-3 rounded-lg text-on-surface-variant font-label-md text-label-md whitespace-nowrap">Xoá</button>
+</div>
+<p id="email-provider-help" class="font-body-sm text-body-sm text-on-surface-variant"></p>
+</div>
+
+<!-- Office 365 OAuth2 app registration - shown for both OAuth2 providers -->
+<div id="email-oauth-fields" class="hidden flex-col gap-5">
+<div class="glass-note rounded-xl p-4 flex flex-col gap-2">
+<p class="font-label-md text-label-md text-on-surface uppercase flex items-center gap-2"><span class="material-symbols-outlined text-[18px] text-electric-indigo">info</span>Các bước chuẩn bị trong Microsoft Entra</p>
+<div class="font-body-sm text-body-sm text-on-surface-variant" id="email-oauth-steps"></div>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<label for="email-tenant_id" class="ed-label">Tenant ID</label>
+<input id="email-tenant_id" name="tenant_id" placeholder="00000000-0000-0000-0000-000000000000" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="email-client_id" class="ed-label">Client ID (Application ID)</label>
+<input id="email-client_id" name="client_id" placeholder="00000000-0000-0000-0000-000000000000" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+</div>
+
+<div class="flex flex-col gap-2">
+<label for="email-client_secret" class="ed-label">Client Secret</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1" id="email-secret-hint"></p>
+<div class="flex flex-wrap gap-2 items-center">
+<input id="email-client_secret" name="client_secret" type="password" autocomplete="new-password" class="ed-input flex-1 min-w-0 px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+<button type="button" id="email-secret-toggle" class="glass-btn px-4 py-3 rounded-lg text-on-surface-variant" title="Hiện/ẩn client secret"><span class="material-symbols-outlined">visibility</span></button>
+<button type="button" id="email-secret-clear" class="glass-btn glass-btn--danger px-4 py-3 rounded-lg text-on-surface-variant font-label-md text-label-md whitespace-nowrap">Xoá</button>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Client secret có ngày hết hạn &mdash; ghi lại ngày đó, vì khi hết hạn email sẽ ngừng gửi mà không có cảnh báo trước.</p>
+</div>
+
+<!-- Delegated mode only: the one-time Microsoft sign-in that yields a refresh token -->
+<div id="email-consent-block" class="glass-note hidden flex-col gap-3 rounded-xl p-4">
+<p class="font-label-md text-label-md text-on-surface uppercase">Cấp quyền bằng đăng nhập một lần</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Lưu Tenant ID, Client ID và Client Secret trước, rồi bấm nút dưới đây và đăng nhập bằng <b>chính hộp thư dùng để gửi</b>. Sau bước này máy chủ tự làm mới quyền, không cần đăng nhập lại.</p>
+<div class="flex flex-wrap gap-3 items-center">
+<button type="button" id="email-consent-btn" class="ed-btn-primary tap-target"><span class="material-symbols-outlined text-[18px]">login</span>Đăng nhập Microsoft để cấp quyền</button>
+<span id="email-consent-status" class="font-body-sm text-body-sm"></span>
+</div>
+<div class="flex flex-col gap-1">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Dán chính xác giá trị này vào <b>Redirect URI (Web)</b> của app registration:</p>
+<code id="email-redirect-uri" class="ed-input font-body-sm text-body-sm text-on-surface rounded-lg px-3 py-2 break-all">&mdash;</code>
+</div>
+</div>
+</div>
+
+<hr class="border-outline-variant/40">
+
+<!-- Sender identity -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<label for="email-from_name" class="ed-label">Tên người gửi</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Để trống để dùng tên thương hiệu.</p>
+<input id="email-from_name" name="from_name" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label for="email-from_email" class="ed-label">Email người gửi</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1">Để trống để dùng tài khoản ở trên.</p>
+<input id="email-from_email" name="from_email" type="email" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+</div>
+
+<div class="flex flex-col gap-2">
+<label for="email-site_url" class="ed-label">Địa chỉ trang (dùng cho link trong email)</label>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-1" id="email-site-url-hint">Ví dụ: https://blog.example.com — không có dấu / ở cuối. Thiếu giá trị này thì link "Đọc bài viết" trong email thông báo sẽ bị hỏng.</p>
+<input id="email-site_url" name="site_url" type="url" placeholder="https://blog.example.com" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+
+<hr class="border-outline-variant/40">
+
+<!-- Toggles -->
+<div class="flex flex-col gap-3">
+<p class="ed-label">Loại email được gửi</p>
+<label class="glass-check flex items-start gap-3 p-4 rounded-lg cursor-pointer">
+<input type="checkbox" id="email-notify_new_post" name="notify_new_post" class="mt-0.5 w-5 h-5 shrink-0 rounded border-outline-variant text-electric-indigo focus:ring-electric-indigo">
+<span>
+<span class="font-body-md text-body-md text-on-surface block">Thông báo bài viết mới</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Gửi email cho những người dùng đã bật nhận thông báo trong trang cá nhân, mỗi khi có bài viết được đăng.</span>
+</span>
+</label>
+<label class="glass-check flex items-start gap-3 p-4 rounded-lg cursor-pointer">
+<input type="checkbox" id="email-otp_enabled" name="otp_enabled" class="mt-0.5 w-5 h-5 shrink-0 rounded border-outline-variant text-electric-indigo focus:ring-electric-indigo">
+<span>
+<span class="font-body-md text-body-md text-on-surface block">Mã OTP quên mật khẩu</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Cho phép người dùng nhận mã OTP 6 số qua email để tự đặt lại mật khẩu. Tắt đi thì chức năng "Quên mật khẩu" sẽ báo lỗi.</span>
+</span>
+</label>
+</div>
+
+<!-- Admin event mail. Same form, same "Lưu cài đặt" button, same
+     PUT /api/admin/email-settings as everything above - there is no second form.
+     All four default OFF in the database, so an upgrade never starts mailing the
+     owner on its own; ticking one here is the whole opt-in. -->
+<div class="flex flex-col gap-3 mt-6">
+<p class="ed-label">Email gửi cho quản trị viên khi có sự kiện</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant -mt-2">
+Gửi tới <b>Email liên hệ</b> (Bảng quản trị &gt; Quản lí trang chủ), mỗi sự kiện một thư, ngay khi nó xảy ra, và mở thẳng thẻ Thông báo bằng nút trong thư. Chưa đặt địa chỉ đó hoặc chưa cấu hình SMTP thì các công tắc này không làm gì.
+</p>
+<label class="glass-check flex items-start gap-3 p-4 rounded-lg cursor-pointer">
+<input type="checkbox" id="email-notify_comment_reported" name="notify_comment_reported" class="mt-0.5 w-5 h-5 shrink-0 rounded border-outline-variant text-electric-indigo focus:ring-electric-indigo">
+<span>
+<span class="font-body-md text-body-md text-on-surface block">Bình luận bị báo cáo</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Một người đọc đã đăng nhập báo cáo một bình luận, kèm lý do và lời kể của họ.</span>
+</span>
+</label>
+<label class="glass-check flex items-start gap-3 p-4 rounded-lg cursor-pointer">
+<input type="checkbox" id="email-notify_new_comment" name="notify_new_comment" class="mt-0.5 w-5 h-5 shrink-0 rounded border-outline-variant text-electric-indigo focus:ring-electric-indigo">
+<span>
+<span class="font-body-md text-body-md text-on-surface block">Bình luận mới</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Mỗi bình luận mới trên toàn trang, kèm đoạn trích nội dung.</span>
+</span>
+</label>
+<label class="glass-check flex items-start gap-3 p-4 rounded-lg cursor-pointer">
+<input type="checkbox" id="email-notify_new_user" name="notify_new_user" class="mt-0.5 w-5 h-5 shrink-0 rounded border-outline-variant text-electric-indigo focus:ring-electric-indigo">
+<span>
+<span class="font-body-md text-body-md text-on-surface block">Người dùng mới đăng ký</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Một tài khoản vừa đăng ký xong (đã xác thực email, hoặc đăng nhập Google lần đầu).</span>
+</span>
+</label>
+<label class="glass-check flex items-start gap-3 p-4 rounded-lg cursor-pointer">
+<input type="checkbox" id="email-notify_comment_hidden" name="notify_comment_hidden" class="mt-0.5 w-5 h-5 shrink-0 rounded border-outline-variant text-electric-indigo focus:ring-electric-indigo">
+<span>
+<span class="font-body-md text-body-md text-on-surface block">Ẩn / bỏ ẩn bình luận</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Nhật kí kiểm duyệt: mỗi lần một quản trị viên ẩn hoặc bỏ ẩn một bình luận.</span>
+</span>
+</label>
+</div>
+
+<div class="flex flex-wrap gap-3 justify-end mt-2">
+<button type="submit" class="ed-btn-primary tap-target">Lưu cài đặt</button>
+</div>
+<p id="email-settings-message" class="text-sm hidden"></p>
+</form>
+</div>
+
+<!-- Test send -->
+<div class="ed-panel rounded-xl p-6 sm:p-8">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-electric-indigo">send</span>Kiểm tra cấu hình
+</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6">Kiểm tra kết nối tới máy chủ SMTP và (tuỳ chọn) gửi một email thử. Hãy <b>lưu cài đặt trước</b> khi kiểm tra.</p>
+<div class="flex flex-col sm:flex-row gap-3 max-w-xl">
+<input id="email-test-to" type="email" placeholder="Gửi email thử tới địa chỉ... (để trống để chỉ kiểm tra kết nối)" class="ed-input flex-1 min-w-0 px-4 py-3 rounded-lg font-body-sm text-body-sm text-on-surface">
+<button type="button" id="email-test-btn" class="ed-btn-outline tap-target whitespace-nowrap">Kiểm tra</button>
+</div>
+<p id="email-test-message" class="text-sm mt-4 hidden"></p>
+</div>
+
+<!-- Provider setup guide -->
+<div class="ed-panel rounded-xl p-6 sm:p-8">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-electric-indigo">help</span>Hướng dẫn lấy mật khẩu ứng dụng
+</h3>
+<div class="flex flex-col gap-6 font-body-sm text-body-sm text-on-surface-variant">
+<div>
+<p class="font-body-md text-body-md text-on-surface mb-2">Gmail / Google Workspace</p>
+<ol class="list-decimal list-inside flex flex-col gap-1">
+<li>Bật <b>Xác minh 2 bước</b> cho tài khoản Google.</li>
+<li>Vào <a class="text-primary underline" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">myaccount.google.com/apppasswords</a> và tạo một App Password.</li>
+<li>Dán mã 16 ký tự đó vào ô "Mật khẩu ứng dụng" (không dùng mật khẩu Google thường).</li>
+</ol>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface mb-2">Office 365 / Outlook</p>
+<ol class="list-decimal list-inside flex flex-col gap-1">
+<li>Bật <b>Multi-factor authentication</b>, sau đó tạo App Password tại <a class="text-primary underline" href="https://mysignins.microsoft.com/security-info" target="_blank" rel="noopener noreferrer">mysignins.microsoft.com/security-info</a>.</li>
+<li>Đảm bảo admin Microsoft 365 đã bật <b>Authenticated SMTP</b> cho hộp thư này (Exchange admin center → Mailbox → Email apps).</li>
+<li>Nếu tổ chức đã tắt hoàn toàn SMTP AUTH, hãy dùng một hộp thư khác hoặc dịch vụ gửi mail riêng (chọn "Máy chủ SMTP tuỳ chỉnh").</li>
+</ol>
+</div>
+<p class="text-on-surface-variant">Mật khẩu được lưu trong cơ sở dữ liệu của máy chủ và <b>không bao giờ</b> được trả về trình duyệt sau khi lưu.</p>
+</div>
+</div>
+</section>
+
+<!-- Thùng rác (Recycle bin) Tab -->
+<!-- Nothing in this app is deleted for good any more: the four DELETE routes
+     (bài viết, bình luận, người dùng, media) move their row into the bin, and this
+     panel is where an admin puts it back or finishes the job. Two actions per row,
+     no third - "xoá vĩnh viễn" is the only irreversible thing left here, which is
+     why it is the one that asks for a confirm naming what goes with it.
+     Paging is server-side rather than the in-memory slice the Users tab does: a
+     bin can hold years of deletions, and unlike an account list it has no natural
+     cap, so only the page being looked at is fetched. The folder chips are the
+     same kind of question, so switching folder asks the server too. -->
+<section id="tab-trash" class="tab-panel hidden flex flex-col gap-gutter">
+<div class="flex justify-between items-center flex-wrap gap-4">
+<div>
+<h2 class="ed-section-title">Thùng rác</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Những gì đã xoá nằm ở đây cho tới khi bạn khôi phục hoặc xoá vĩnh viễn.</p>
+</div>
+</div>
+
+<div class="ed-panel rounded-xl flex flex-col overflow-hidden">
+
+<!-- Folder bar: the same pill row as the Users tab's filters, because it is the
+     same control - one set of chips, exactly one in force. The count inside each
+     pill is what makes the bin readable before you open a folder; it is a span
+     admin.js fills, and it hides itself when empty (see .trash-chip-count). -->
+<div class="user-band p-4 sm:p-6 border-b flex flex-col gap-4">
+<div class="flex items-center gap-2 user-filter-row" id="trash-folder-chips" role="group" aria-label="Thư mục thùng rác">
+<span class="hidden sm:inline-flex items-center gap-1.5 pr-1 ed-label shrink-0" aria-hidden="true">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>Thư mục
+</span>
+<button type="button" data-folder="posts" class="user-chip tap-target active"><span class="material-symbols-outlined">article</span>Bài viết<span class="trash-chip-count" data-trash-count="posts"></span></button>
+<button type="button" data-folder="comments" class="user-chip tap-target"><span class="material-symbols-outlined">chat_bubble</span>Bình luận<span class="trash-chip-count" data-trash-count="comments"></span></button>
+<button type="button" data-folder="users" class="user-chip tap-target"><span class="material-symbols-outlined">person</span>Người dùng<span class="trash-chip-count" data-trash-count="users"></span></button>
+<button type="button" data-folder="media" class="user-chip tap-target"><span class="material-symbols-outlined">image</span>Media<span class="trash-chip-count" data-trash-count="media"></span></button>
+</div>
+<!-- Result of the last action, or its error, in place rather than as a toast: the
+     row it is about to has just disappeared from or appeared in the list, and a
+     message sitting where the list is reads as belonging to it. -->
+<p id="trash-msg" class="hidden font-body-sm text-body-sm"></p>
+</div>
+
+<div class="flex flex-col divide-y divide-outline-variant/40" id="trash-list" aria-live="polite">
+<p class="p-6 font-body-md text-body-md text-on-surface-variant">Đang tải...</p>
+</div>
+
+<div class="user-band p-4 border-t flex flex-wrap items-center justify-between gap-3">
+<span class="font-body-sm text-body-sm text-on-surface-variant" id="trash-count"></span>
+<nav class="media-pager hidden" id="trash-pager" aria-label="Chuyển trang thùng rác"></nav>
+</div>
+</div>
+</section>
+
+<!-- Notifications Tab -->
+<!-- Four kinds of event, one list, newest first. NOT the same thing as the
+     "Hoạt động gần đây" card on Tổng quan even though both talk about comments:
+     that feed is "what is happening on the site", unioned out of four tables on
+     every read (routes/admin.js), while this one is "what needs the admin", real
+     rows with a read state. Neither can stand in for the other - the feed knows
+     nothing about unread, and this table does not list every like. -->
+<section id="tab-notifications" class="tab-panel hidden flex flex-col gap-gutter">
+<div class="flex justify-between items-center flex-wrap gap-4">
+<div>
+<h2 class="ed-section-title">Thông báo</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Bình luận bị báo cáo, bình luận mới, người dùng mới đăng ký, và những lần ẩn / bỏ ẩn bình luận.</p>
+</div>
+<!-- done_all is a literal in this markup, so scripts/icon-names.py scrapes it;
+     no DYNAMIC entry needed for it. -->
+<button type="button" id="notif-read-all" class="ed-btn-outline tap-target flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">done_all</span>Đánh dấu tất cả đã đọc
+</button>
+</div>
+
+<div class="ed-panel rounded-xl flex flex-col overflow-hidden">
+<div class="user-band p-4 sm:p-6 border-b flex flex-col gap-4">
+<div class="flex items-center gap-2 user-filter-row" id="notif-filter-chips" role="group" aria-label="Lọc thông báo">
+<button type="button" data-filter="" class="user-chip tap-target active">Tất cả</button>
+<button type="button" data-filter="unread" class="user-chip tap-target">Chưa đọc</button>
+<button type="button" data-filter="comment_reported" class="user-chip tap-target"><span class="material-symbols-outlined">flag</span>Bị báo cáo</button>
+<button type="button" data-filter="new_comment" class="user-chip tap-target"><span class="material-symbols-outlined">chat_bubble</span>Bình luận</button>
+<button type="button" data-filter="new_user" class="user-chip tap-target"><span class="material-symbols-outlined">person_add</span>Người dùng</button>
+<button type="button" data-filter="comment_hidden" class="user-chip tap-target"><span class="material-symbols-outlined">visibility_off</span>Ẩn / hiện</button>
+</div>
+<p id="notif-msg" class="hidden font-body-sm text-body-sm"></p>
+</div>
+
+<div class="flex flex-col divide-y divide-outline-variant/40" id="notification-list" aria-live="polite">
+<p class="p-6 font-body-md text-body-md text-on-surface-variant">Đang tải...</p>
+</div>
+
+<div class="user-band p-4 border-t flex flex-wrap items-center justify-between gap-3">
+<span class="font-body-sm text-body-sm text-on-surface-variant" id="notification-count"></span>
+<nav class="media-pager hidden" id="notification-pager" aria-label="Chuyển trang thông báo"></nav>
+</div>
+</div>
+</section>
+
+</div>
+</main>
+
+<!-- Footer -->
+<!-- Just the copyright line now - Liên hệ/Điều khoản are gone (the mailto
+     link and the terms page both), so a footer that only ever held those and
+     this line does not need to exist as anything more. -->
+<footer class="ed-footer w-full py-3 mt-auto">
+<div class="text-center px-sm md:px-margin-page max-w-7xl mx-auto font-body-sm text-body-sm">© <span id="footer-year"></span> <span data-footer-text data-fallback="TuanPA.">TuanPA.</span></div>
+</footer>
+
+<!-- Add User Modal -->
+<div class="fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto p-4 bg-black/40" id="add-user-modal">
+<div class="ed-panel bg-surface-container-lowest rounded-xl p-6 sm:p-8 max-w-md w-full my-auto">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-electric-indigo">person_add</span>Thêm người dùng mới
+</h3>
+<p id="add-user-error" class="hidden text-sm text-error mb-4"></p>
+<form id="add-user-form" class="flex flex-col gap-4">
+<div class="flex flex-col gap-2">
+<label class="ed-label">Họ và tên</label>
+<input name="name" required class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label class="ed-label">Email</label>
+<input name="email" type="email" required class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label class="ed-label">Mật khẩu tạm thời</label>
+<input name="password" type="password" required minlength="6" placeholder="Ít nhất 6 ký tự" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+</div>
+<div class="flex flex-col gap-2">
+<label id="add-user-role-label" class="ed-label">Vai trò</label>
+<!-- The value the form submits. A hidden input beside the button rather than the
+     button's own data-role, so `new FormData(form)` in admin.js keeps reading
+     `role` exactly as it did from the <select> this replaced. admin.js paints both
+     from one call, so what is shown and what is sent cannot drift apart. -->
+<input type="hidden" name="role" value="readonly">
+<!-- Not a <select>: its popup is drawn by the OS, so it could never be glass, and on
+     the dark theme it opened as a white sheet over this card. It is the table's
+     listbox instead - the same #role-menu, opened from either - styled as a field
+     rather than as a chip by .user-role--field. aria-labelledby names it "Vai trò"
+     plus its own text, so the value is announced with the label and follows every
+     repaint for free. -->
+<button type="button" id="add-user-role" class="user-role user-role--field user-role--readonly"
+        aria-haspopup="listbox" aria-expanded="false" aria-controls="role-menu"
+        aria-labelledby="add-user-role-label add-user-role" data-role="readonly">
+<span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+<span>Readonly <span class="user-role-field-hint">chỉ đọc &amp; bình luận</span></span>
+</button>
+</div>
+<div class="flex gap-4 justify-end mt-2">
+<button type="button" id="add-user-cancel-btn" class="ed-btn-text tap-target px-6 py-2">Hủy</button>
+<button type="submit" class="ed-btn-primary tap-target">Tạo tài khoản</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- Reset Password Modal -->
+<!-- Opened from a user row's key action. admin.js fills in the hidden id + the
+     name shown in the intro line before revealing it. -->
+<div class="fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto p-4 bg-black/40" id="reset-password-modal">
+<div class="ed-panel bg-surface-container-lowest rounded-xl p-6 sm:p-8 max-w-md w-full my-auto">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-electric-indigo">key</span>Đặt lại mật khẩu
+</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6">Đặt mật khẩu mới cho <b id="reset-password-target">người dùng</b>. Họ sẽ cần mật khẩu này ở lần đăng nhập sau; phiên đang mở của họ vẫn còn hiệu lực - hãy dùng "Vô hiệu hoá" nếu cần chặn truy cập ngay. Mật khẩu chỉ hiện một lần, hãy tự gửi cho họ qua một kênh an toàn.</p>
+<p id="reset-password-error" class="hidden text-sm text-error mb-4"></p>
+<form id="reset-password-form" class="flex flex-col gap-4">
+<input type="hidden" name="userId">
+<div class="flex flex-col gap-2">
+<label for="reset-password-input" class="ed-label">Mật khẩu mới</label>
+<input id="reset-password-input" name="password" type="text" required minlength="6" autocomplete="new-password" placeholder="Ít nhất 6 ký tự" class="ed-input w-full px-4 py-3 rounded-lg font-body-md text-body-md text-on-surface">
+<button type="button" id="reset-password-generate" class="self-start font-label-md text-label-md text-electric-indigo icon-link flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">casino</span><span class="icon-link-label decoration-2 underline-offset-4">Tạo mật khẩu ngẫu nhiên</span>
+</button>
+</div>
+<div class="flex gap-4 justify-end mt-2">
+<button type="button" id="reset-password-cancel-btn" class="ed-btn-text tap-target px-6 py-2">Hủy</button>
+<button type="submit" class="ed-btn-primary tap-target">Đặt lại</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- Change Author Modal -->
+<!-- Opened from a post row's own action in "Quản lý bài viết" (admin.js
+     loadAllPosts()), not from the Users tab, so it fetches its own user list
+     fresh each open rather than depending on allUsers (which only Users tab
+     visits populate). The server re-validates the target id and the
+     requester's admin role independently either way - see the PUT
+     /api/posts/:id comment in server/routes/posts.js. -->
+<div class="fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto p-4 bg-black/40" id="change-author-modal">
+<div class="ed-panel bg-surface-container-lowest rounded-xl p-6 sm:p-8 max-w-md w-full my-auto">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-electric-indigo">manage_accounts</span>Đổi tác giả
+</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-1">Bài viết: <b id="change-author-target">-</b></p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6">Tác giả hiện tại: <b id="change-author-current">-</b></p>
+<p id="change-author-error" class="hidden text-sm text-error mb-4"></p>
+<form id="change-author-form" class="flex flex-col gap-4">
+<input type="hidden" name="postId">
+<input type="hidden" name="authorId">
+<div class="flex flex-col gap-2">
+<label for="change-author-trigger" class="ed-label">Tác giả mới</label>
+<!-- Same picker as "Vai trò" in the add-user modal (.user-role--field, opening
+     the site's own floating listbox instead of an OS-drawn <select> popup) -
+     see the change-author picker block in admin.js for why this one keeps
+     its own menu rather than sharing #role-menu. -->
+<button type="button" id="change-author-trigger" class="user-role user-role--field" aria-haspopup="listbox" aria-expanded="false" aria-controls="change-author-menu" disabled>
+<span>Đang tải danh sách người dùng...</span>
+</button>
+</div>
+<div class="flex gap-4 justify-end mt-2">
+<button type="button" id="change-author-cancel-btn" class="ed-btn-text tap-target px-6 py-2">Hủy</button>
+<button type="submit" class="ed-btn-primary tap-target">Đổi tác giả</button>
+</div>
+</form>
+</div>
+</div>
+
+<script src="/js/api.js"></script>
+<!-- Media library: shared with write.html's picker. Before admin.js, which
+     calls loadMedia() when the Thư viện tab is opened. -->
+<script src="/js/media.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

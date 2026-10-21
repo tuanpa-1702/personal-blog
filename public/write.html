@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-name="Viết bài">Viết bài - AnonyHT</title>
+<meta name="theme-color" content="#f6f1e7" data-theme-color-dark="#1e1a16">
+<!-- Favicon do admin đặt (Bảng quản trị > Quản lí trang chủ). server/render-html.js
+     điền href từ bảng settings trước khi gửi; giá trị trống hoặc chưa đặt thì bỏ cả thẻ. -->
+<link rel="icon" data-setting-href="favicon">
+<!-- Theme switch. MUST stay here - blocking, in <head>, ahead of the
+     stylesheets - so <html class="dark"> is set before the first paint.
+     Deferring it (or folding it into api.js at the end of <body>) brings back
+     the white flash on every navigation. -->
+<script src="/js/theme.js"></script>
+
+<!-- Fonts. Both families are SELF-HOSTED in /css/fonts.css, which
+     scripts/fetch-fonts.py generates: Inter as the static faces
+     Google serves per unicode-range (latin / latin-ext / vietnamese - the
+     three a page of Vietnamese prose actually selects), Material Symbols as a
+     subset of just the icons in use. Same-origin is the point: the first paint
+     waits on no third party, the faces are discovered while this
+     render-blocking stylesheet parses, and the hashed filenames are what lets
+     server.js serve /fonts/ as immutable for a year.
+     The two font-display values differ because the families fail differently.
+     An icon is a LIGATURE - the markup contains the word "search" and the font
+     turns it into a glyph - so block hides nothing-yet instead of printing the
+     word while the subset arrives. Body text swaps, because its fallback stack
+     is already readable text at the right size.
+     The faces the first paint sets text in are preloaded between the
+     @generated markers below; fetch-fonts.py rewrites their hashed hrefs. -->
+<link href="/css/fonts.css" rel="stylesheet">
+<!-- @font-face alone does not start a download until the layout needs a glyph,
+     which on the icon font means icons stay invisible for an extra round-trip
+     (display:block draws nothing), so the faces the first screen needs are
+     preloaded: the icon subset, plus the body family's 400 in the two
+     unicode-ranges Vietnamese prose is actually set in - latin and vietnamese,
+     which is why two, and why not the 700: body text is the first paint,
+     headings at worst the one after. `crossorigin` is required even
+     same-origin - fonts are always fetched anonymously, and a preload that
+     does not match the mode is simply downloaded twice.
+     The hrefs are hashed and therefore GENERATED - `npm run fetch:fonts`
+     rewrites everything between the markers below. Do not edit them by hand. -->
+<!-- @generated:font-preload -->
+<link as="font" crossorigin href="/fonts/material-symbols-subset.c7d51076.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-latin.3100e775.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-vietnamese.5c66f9e0.woff2" rel="preload" type="font/woff2">
+<!-- /@generated:font-preload -->
+
+<!-- Editorial redesign - see css/editorial.css. Retints this page mostly by
+     ALIASING the shared --c-* tokens (write.css's rt-editor toolbar, its
+     .glass-panel cards, .input-glass fields, .chip) rather than editing
+     write.css's ~1300 lines directly - see the alias block's own comment.
+     Newsreader is preloaded for the same reason as the two Inter
+     faces above. Not @generated - hand-maintained. -->
+<link as="font" crossorigin href="/fonts/newsreader-n-400-latin.62981321.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/newsreader-n-400-vietnamese.f0dcc979.woff2" rel="preload" type="font/woff2">
+
+<!-- Design tokens, then the utilities. tailwind.css is COMPILED (see
+     tailwind.config.js + `npm run build:css`), replacing
+     <script src="https://cdn.tailwindcss.com">, which was not a stylesheet at
+     all but a 451 KB compiler: it parsed the DOM and only then generated and
+     appended a <style>. Until that finished not one utility existed - including
+     `.hidden`, which common.css does not define - so every element the markup
+     had hidden was painted and the page was a bare stack of unstyled text.
+     That is the other half of the flash.
+     Load order is deliberate: the CDN appended its <style> at the END of
+     <head>, after common.css, so keeping tailwind.css last preserves exactly
+     the cascade the pages were built against. -->
+<link href="/css/common.css" rel="stylesheet">
+<!-- Media library: the grid, uploader and picker. Shared by admin.html
+     (Thư viện tab) and write.html (picker modal) so the two look identical. -->
+<link href="/css/media.css" rel="stylesheet">
+<link href="/css/tailwind.css" rel="stylesheet">
+<!-- The editor chrome (docked toolbar, block shells, menus) moved out of
+     the inline <style> that used to sit here, so /terms.html can load the SAME
+     editor for the terms document. Linked after tailwind.css, exactly where the
+     <style> was, so the cascade write.html was built against is unchanged. -->
+<link href="/css/write.css" rel="stylesheet">
+<link href="/css/editorial.css" rel="stylesheet">
+<!-- The "Bố cục ảnh" layouts (img-side, split, gallery-*) and the 80vh cap on
+     every article picture. After editorial.css so its .prose-content rules win. -->
+<link href="/css/image-layouts.css" rel="stylesheet">
+
+</head>
+<body class="editorial-page font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col pt-16">
+
+<!-- TopNavBar -->
+<nav class="ed-nav fixed top-0 w-full z-50">
+<div class="flex justify-between items-center h-16 px-sm md:px-margin-page w-full rt-canvas mx-auto gap-6">
+<div class="flex items-center gap-6">
+<button class="ed-icon-btn ed-hamburger-btn flex items-center justify-center p-1.5" type="button" data-action="mobile-nav-toggle" aria-label="Mở menu điều hướng"><span class="material-symbols-outlined">menu</span></button>
+<a class="group inline-flex items-baseline gap-1.5" href="/index.html" id="nav-brand">
+<span class="ed-wordmark" data-brand-name>TuanPA</span>
+</a>
+<div class="ed-nav-links">
+<a class="ed-nav-link" href="/index.html">Trang chủ</a>
+<a class="ed-nav-link" href="/viewall.html">Tất cả bài viết</a>
+<a class="ed-nav-link" href="/about.html">Về tác giả</a>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<div class="relative hidden sm:block" id="header-search-wrap">
+<span class="material-symbols-outlined ed-icon-faint absolute left-3 top-1/2 -translate-y-1/2 text-[16px] pointer-events-none">search</span>
+<input id="search-input" type="text" placeholder="Tìm kiếm bài viết..." aria-label="Tìm kiếm bài viết" class="ed-search pl-8 pr-1 py-1.5 font-body-sm text-body-sm w-40 lg:w-56">
+</div>
+<button class="ed-icon-btn sm:hidden flex items-center justify-center p-2" id="header-search-toggle" title="Tìm kiếm" data-action="search-toggle"><span class="material-symbols-outlined">search</span></button>
+<div class="ed-nav-divider hidden sm:block" aria-hidden="true"></div>
+<div class="relative">
+<button id="nav-avatar-btn" class="ed-avatar-btn overflow-hidden flex items-center justify-center active:scale-95 transition-transform" title="Tài khoản" data-action="nav-dropdown">
+<img alt="Ảnh đại diện" class="w-full h-full object-cover hidden" id="nav-avatar-img">
+<span class="material-symbols-outlined ed-icon-soft text-[18px]" id="nav-avatar-placeholder">person</span>
+</button>
+<div class="ed-dropdown-panel absolute right-0 mt-2 w-56 z-50 hidden origin-top-right" id="user-dropdown-menu"></div>
+</div>
+</div>
+</div>
+</nav>
+
+<!-- Search Overlay -->
+<div class="ed-search-overlay hidden sm:hidden fixed top-16 left-0 w-full z-40" id="search-overlay">
+<div class="rt-canvas mx-auto px-sm md:px-margin-page py-4 flex items-center gap-4">
+<span class="material-symbols-outlined ed-icon-faint">search</span>
+<input class="ed-search flex-grow min-w-0 border-none py-1 font-body-lg text-body-lg" id="search-input-mobile" placeholder="Tìm kiếm bài viết..." type="text">
+<button class="ed-icon-btn shrink-0 w-11 h-11 flex items-center justify-center" aria-label="Đóng tìm kiếm" data-action="search-close"><span class="material-symbols-outlined">close</span></button>
+</div>
+</div>
+
+<div id="not-logged-in" class="hidden flex-grow flex-col items-center justify-center gap-4 py-xl">
+<p class="ed-icon-soft">Bạn cần đăng nhập để viết bài.</p>
+<button class="ed-btn-primary" data-action="auth-open">Đăng nhập</button>
+</div>
+
+<div id="not-writer" class="hidden flex-grow flex-col items-center justify-center gap-4 py-xl text-center px-6">
+<p class="ed-icon-soft max-w-md">Tài khoản của bạn hiện chỉ có quyền đọc và bình luận. Liên hệ quản trị viên để được cấp quyền viết bài.</p>
+<a class="ed-link-back underline" href="/profile.html">Về trang cá nhân</a>
+</div>
+
+<!-- Main Content Canvas -->
+<main id="editor-main" class="hidden flex-grow w-full rt-canvas mx-auto px-sm md:px-margin-page py-md md:py-lg">
+<div class="flex flex-wrap items-center justify-between gap-4 mb-md">
+<h1 class="ed-section-title" id="editor-heading">Viết bài mới</h1>
+</div>
+<p id="form-error" class="hidden text-sm text-error mb-4"></p>
+
+<form id="post-form" class="flex flex-col lg:flex-row gap-gutter items-start">
+
+<!-- Left Column: the block tray, as a card of its own. Three cards side by side
+     from lg (see .rt-rail in css/write.css); stacked, tray first,
+     below that. -->
+<aside class="rt-rail" aria-label="Thêm khối nội dung">
+<div class="ed-panel p-md flex flex-col gap-4">
+<h2 class="ed-section-title ed-section-head pb-2">Thêm khối</h2>
+<div class="rt-add-group">
+<button type="button" data-type="paragraph" class="add-block-btn rt-add-btn tap-target">
+<span class="material-symbols-outlined" aria-hidden="true">format_align_left</span>+ VĂN BẢN
+</button>
+<button type="button" data-type="heading" class="add-block-btn rt-add-btn tap-target">
+<span class="material-symbols-outlined" aria-hidden="true">title</span>+ TIÊU ĐỀ
+</button>
+<button type="button" data-type="image" class="add-block-btn rt-add-btn tap-target">
+<span class="material-symbols-outlined" aria-hidden="true">image</span>+ ẢNH
+</button>
+<!-- Video / map / player from a pasted link. The URL is resolved by
+     POST /api/posts/embed, which is the same allowlist that re-checks the stored
+     src on save - so nothing can be embedded here that the page would later strip. -->
+<button type="button" data-type="embed" class="add-block-btn rt-add-btn tap-target">
+<span class="material-symbols-outlined" aria-hidden="true">play_circle</span>+ NHÚNG
+</button>
+<!-- "Bố cục ảnh": 1-12 pictures in one of the six layouts of
+     css/image-layouts.css (ảnh cạnh chữ, ảnh ngang rộng, chia đôi, 1 lớn + 2 dọc,
+     2 dọc, lưới). See docs/bo-cuc-anh.md. -->
+<button type="button" data-type="layout" class="add-block-btn rt-add-btn tap-target">
+<span class="material-symbols-outlined" aria-hidden="true">photo_library</span>+ BỐ CỤC ẢNH
+</button>
+</div>
+</div>
+</aside>
+
+<!-- Middle Column: Main Content Editor -->
+<div class="rt-editor-col flex flex-col gap-md">
+<div class="ed-panel p-md flex flex-col gap-md">
+
+<!-- Title Input -->
+<div class="flex flex-col gap-2">
+<label class="sr-only" for="post-title-input">Tiêu đề</label>
+<input id="post-title-input" name="title" required type="text" placeholder="Nhập tiêu đề bài viết..." class="ed-hero-title bg-transparent border-none focus:ring-0 px-0 py-2 placeholder-on-surface-variant/40 w-full outline-none" style="font-size: 2rem">
+</div>
+
+<!-- Short Summary -->
+<!-- A small, INDEPENDENT formatting toolbar - not the big rt-dock every
+     content block shares (js/write.js's rtDock()/RT_TOOLBAR): that one opens
+     the instant ANY .rt-editor gets focus (rtDockShouldOpen()), and its 25
+     buttons - headings, tables, images - answer a question ("what kind of
+     block is this") that makes no sense for a one-line standfirst. This
+     field deliberately does NOT carry the .rt-editor class for exactly that
+     reason: it stays out of that system entirely and gets its own three
+     buttons instead, wired in js/write.js (initExcerptEditor()). Ctrl+B/I
+     still work - contenteditable answers those natively, with no JS of its
+     own needed. -->
+<div class="flex flex-col gap-2 mt-2">
+<label class="ed-label" id="post-excerpt-label">Tóm tắt ngắn</label>
+<div class="flex items-center gap-1" role="toolbar" aria-label="Định dạng tóm tắt ngắn">
+<button type="button" class="rt-btn rt-btn--bold" data-excerpt-cmd="bold" aria-pressed="false" title="Đậm (Ctrl+B)">B</button>
+<button type="button" class="rt-btn rt-btn--italic" data-excerpt-cmd="italic" aria-pressed="false" title="Nghiêng (Ctrl+I)">I</button>
+<button type="button" class="rt-btn" data-excerpt-cmd="link" aria-pressed="false" aria-label="Chèn / sửa liên kết" title="Chèn / sửa liên kết"><span class="material-symbols-outlined" aria-hidden="true">link</span></button>
+</div>
+<div id="post-excerpt-input" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="post-excerpt-label" data-placeholder="Nhập tóm tắt ngắn gọn..." class="ed-input rt-excerpt-editor px-4 py-3 font-body-md text-body-md text-on-surface w-full"></div>
+</div>
+
+<!-- Content Editor Section -->
+<div class="mt-6 flex flex-col gap-4 rt-prose">
+<div class="flex justify-between items-center gap-4 flex-wrap pb-3 border-b" style="border-color: rgb(var(--ed-divider))">
+<span class="ed-label">Nội dung bài viết</span>
+<span class="ed-mono text-body-sm ed-icon-faint" id="blocks-count"></span>
+</div>
+
+<!-- The blocks themselves. The tray that adds them is the card to the left (the
+     first column of the form), so this section is only the article. -->
+<div id="blocks-container" class="flex flex-col gap-3"></div>
+<p id="blocks-empty-hint" class="rt-empty-hint p-md sm:p-xl flex flex-col text-center justify-center min-h-[220px] sm:min-h-[400px] text-on-surface-variant font-body-sm text-body-sm max-w-full leading-relaxed">
+Chưa có nội dung nào.
+</p>
+</div>
+</div>
+</div>
+
+<!-- Right Column: Sidebar Settings -->
+<div class="rt-side-col flex flex-col gap-md">
+
+<!-- Publish Actions -->
+<div class="ed-panel p-md flex flex-col gap-4">
+<h2 class="ed-section-title ed-section-head pb-2">Đăng bài</h2>
+<div class="flex items-start gap-3 mt-2">
+<input type="checkbox" id="draft-checkbox" name="draft" class="mt-1 w-5 h-5 rounded border-outline-variant text-electric-indigo focus:ring-electric-indigo bg-transparent cursor-pointer accent-electric-indigo">
+<label class="font-body-sm text-body-sm text-on-surface cursor-pointer leading-tight" for="draft-checkbox">Lưu dưới dạng bản nháp (chưa đăng công khai)</label>
+</div>
+<div class="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3 mt-4">
+<a href="/profile.html" class="ed-btn-text tap-target flex-1 px-4 py-2.5 justify-center">Hủy</a>
+<button type="submit" class="ed-btn-primary tap-target flex-[2] justify-center">Lưu bài viết</button>
+</div>
+<p id="autosave-status" class="ed-mono text-body-sm ed-icon-faint mt-1" aria-live="polite"></p>
+</div>
+
+<!-- Meta Settings -->
+<div class="ed-panel p-md flex flex-col gap-md">
+<h2 class="ed-section-title ed-section-head pb-2">Thông tin thêm</h2>
+
+<!-- Cover Image -->
+<div class="flex flex-col gap-2 mt-2">
+<label class="ed-label">Ảnh bìa</label>
+<div class="flex flex-col gap-3">
+<img id="cover-preview" class="w-full h-40 object-cover hidden" style="border-radius: 4px; border: 1px solid rgb(var(--ed-divider))" alt="Ảnh bìa">
+<!-- Click to browse, or drag an image straight in from the file explorer. -->
+<label id="cover-dropzone" class="media-dropzone">
+<span class="material-symbols-outlined text-[28px]">cloud_upload</span>
+<span class="font-label-md text-label-md uppercase">Tải ảnh lên</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">hoặc kéo thả ảnh vào đây</span>
+<input type="file" id="cover-file-input" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+</label>
+<!-- The other way in: reuse an image already in the library rather than uploading
+     the same file twice. Opens the picker modal at the bottom of this page. -->
+<button type="button" id="cover-library-btn" class="ed-btn-outline tap-target w-full px-4 py-2.5 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]" aria-hidden="true">perm_media</span>Chọn từ thư viện
+</button>
+<p id="cover-upload-status" class="text-sm text-on-surface-variant hidden"></p>
+<!-- Deliberately NOT type="url": uploads return a site-relative path
+     (/uploads/...) which fails native URL validation and would silently
+     block the whole form from submitting. -->
+<input name="cover_image" id="cover-url-input" type="text" placeholder="https://... (hoặc tải ảnh lên ở trên)" class="ed-input px-4 py-2.5 font-body-sm text-body-sm text-on-surface w-full">
+</div>
+</div>
+
+<!-- Tag -->
+<div class="flex flex-col gap-2 mt-2">
+<label class="ed-label" for="post-tag-input">Thẻ (tag)</label>
+<input id="post-tag-input" name="tag" type="text" placeholder="Công nghệ, Đời sống, ..." class="ed-input px-4 py-2.5 font-body-sm text-body-sm text-on-surface w-full">
+</div>
+
+<!-- Hashtag -->
+<div class="flex flex-col gap-2 mt-2">
+<label class="ed-label" for="post-hashtags-input">Hashtag</label>
+<input id="post-hashtags-input" name="hashtags_input" type="text" placeholder="Javascript, DevLife, ... (cách nhau bằng dấu phẩy)" class="ed-input px-4 py-2.5 font-body-sm text-body-sm text-on-surface w-full">
+<div id="hashtags-preview" class="flex flex-wrap gap-2"></div>
+</div>
+</div>
+</div>
+
+</form>
+</main>
+
+<!-- Footer -->
+<!-- The footer used to be a glass pane of its own - bg-glass-surface, a
+     border-t hairline, an upward shadow and its own backdrop-blur - stacked
+     directly under a page whose content already sits on glass panels. Two
+     blurred translucent layers one pixel apart read as a seam, not as depth.
+     It is text now: the padding and mt-auto stay, because those are what keep
+     the line spaced and pinned to the bottom of a short page, and neither is
+     part of the background. -->
+<!-- Just the copyright line now - Liên hệ/Điều khoản moved up into the nav
+     (matches index.html/post.html/viewall.html/profile.html/admin.html). -->
+<footer class="w-full py-2.5 mt-auto">
+<div class="text-center px-sm md:px-margin-page max-w-7xl mx-auto font-body-sm text-body-sm text-on-surface-variant">© <span id="footer-year"></span> <span data-footer-text data-fallback="TuanPA.">TuanPA.</span></div>
+</footer>
+
+<!-- Media picker. Same grid, uploader and CSS as the admin panel's Thư viện tab -
+     /js/media.js drives both, so picking an image here and browsing it there are the
+     same surface. Opened by openMediaPicker(), which resolves with the chosen image
+     (or null), so write.js can await it like a prompt. -->
+<div id="media-picker" class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/40 p-4">
+<div class="media-picker-card">
+
+<div class="media-picker-head">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-background">Thư viện ảnh</h2>
+<p id="media-upload-hint" class="font-body-sm text-body-sm text-on-surface-variant mt-1">JPG, PNG, WEBP, GIF</p>
+</div>
+<button type="button" id="media-picker-close" aria-label="Đóng thư viện" class="ed-icon-btn tap-target flex-shrink-0 w-9 h-9 flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+
+<div class="media-picker-body flex flex-col gap-4">
+
+<!-- Uploading straight from the picker: the author is here because they want an
+     image, and needing to leave for the admin panel to add one would be absurd. -->
+<label id="media-dropzone" class="media-dropzone">
+<span class="material-symbols-outlined text-[28px]" aria-hidden="true">cloud_upload</span>
+<span class="font-label-md text-label-md uppercase">Kéo ảnh vào đây hoặc bấm để chọn</span>
+<input type="file" id="media-file-input" class="hidden" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+</label>
+
+<div id="media-progress" class="media-progress hidden">
+<div class="media-progress-track"><div id="media-progress-fill" class="media-progress-fill"></div></div>
+<p id="media-progress-label" class="media-progress-label font-body-sm text-body-sm"></p>
+</div>
+<p id="media-upload-error" class="hidden font-body-sm text-body-sm text-error"></p>
+
+<div class="flex flex-wrap items-center gap-3 justify-between">
+<div class="media-search-wrap">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">search</span>
+<input type="text" id="media-search" placeholder="Tìm theo tên file..." aria-label="Tìm ảnh trong thư viện" class="ed-input w-full pl-10 pr-4 py-2 font-body-sm text-body-sm text-on-surface" style="border-radius: 4px">
+</div>
+<label class="flex items-center gap-2 cursor-pointer font-body-sm text-body-sm text-on-surface-variant">
+<input type="checkbox" id="media-mine-only" class="accent-electric-indigo">
+Chỉ ảnh của tôi
+</label>
+</div>
+
+<!-- Same view modes as the admin tab: one implementation (js/media.js), two hosts. -->
+<div class="media-toolbar">
+<span id="media-view-label" class="font-body-sm text-body-sm text-on-surface-variant">Kiểu xem</span>
+<div class="media-view-toggle" role="group" aria-labelledby="media-view-label">
+<button type="button" class="media-view-btn" data-media-view="small" title="Ô nhỏ" aria-label="Xem dạng ô nhỏ" aria-pressed="false">
+<span class="material-symbols-outlined" aria-hidden="true">grid_view</span>
+</button>
+<button type="button" class="media-view-btn" data-media-view="medium" title="Ô vừa" aria-label="Xem dạng ô vừa" aria-pressed="false">
+<span class="material-symbols-outlined" aria-hidden="true">grid_guides</span>
+</button>
+<button type="button" class="media-view-btn" data-media-view="large" title="Ô lớn" aria-label="Xem dạng ô lớn" aria-pressed="false">
+<span class="material-symbols-outlined" aria-hidden="true">view_module</span>
+</button>
+<button type="button" class="media-view-btn" data-media-view="list" title="Danh sách" aria-label="Xem dạng danh sách" aria-pressed="false">
+<span class="material-symbols-outlined" aria-hidden="true">view_list</span>
+</button>
+</div>
+</div>
+
+<p id="media-totals" class="font-body-sm text-body-sm text-on-surface-variant"></p>
+
+<!-- Folders in the picker. Horizontal chips rather than the admin panel's sidebar: a
+     modal has no room for a column, and picking an image is a shallower task than
+     organising the library - so this navigates but does not rename or delete. -->
+<div id="media-folders" class="media-folder-chips"></div>
+<nav id="media-breadcrumb" class="media-breadcrumb hidden" aria-label="Đường dẫn thư mục"></nav>
+
+<div id="media-grid" class="media-grid">
+<p class="media-empty">Đang tải thư viện...</p>
+</div>
+
+<nav id="media-pager" class="media-pager hidden" aria-label="Chuyển trang"></nav>
+</div>
+
+</div>
+</div>
+
+<!-- Cover-image cropper: same drag-to-move/drag-corner-to-resize/canvas-export
+     mechanism as profile.html's own avatar/cover cropper and admin.html's
+     hero-image one (openCoverCropper & friends in write.js) - ported rather
+     than shared, per those two's own comments on why a third copy is simpler
+     here than a parameter-heavy shared module. Locked to ONE ratio
+     (COVER_CROP_RATIO in write.js, matching .ed-lead-media/.ed-cover in
+     editorial.css): a post has exactly one cover, shown at exactly one shape
+     everywhere it appears, so there is no second shape to preview. -->
+<div class="fixed inset-0 hidden items-center justify-center overflow-y-auto p-4 bg-black/40" id="cover-crop-modal" style="z-index:220">
+<div class="ed-panel p-6 sm:p-8 max-w-2xl w-full my-auto">
+<h3 class="ed-section-title mb-2">Cắt ảnh bìa</h3>
+<p class="ed-icon-faint font-body-sm text-body-sm mb-4">Kéo khung để di chuyển, kéo bốn góc để phóng to / thu nhỏ.</p>
+<p id="cover-crop-error" class="hidden text-sm text-error mb-4"></p>
+<div class="relative inline-block max-w-full mx-auto overflow-hidden" id="cover-crop-stage">
+<img id="cover-crop-img" alt="Ảnh cần cắt" class="block max-w-full" draggable="false" style="max-height:55vh; width:auto; user-select:none; -webkit-user-select:none; touch-action:none">
+<div id="cover-crop-box" class="absolute" style="top:0; left:0; width:100%; height:100%; border:2px solid rgb(var(--ed-accent)); box-shadow:0 0 0 9999px rgb(0 0 0 / 0.55); cursor:move; touch-action:none">
+<div data-crop-handle="nw" class="absolute rounded-full" style="top:0; left:0; width:14px; height:14px; transform:translate(-4px,-4px); background:rgb(var(--ed-accent)); cursor:nwse-resize; touch-action:none"></div>
+<div data-crop-handle="ne" class="absolute rounded-full" style="top:0; right:0; width:14px; height:14px; transform:translate(4px,-4px); background:rgb(var(--ed-accent)); cursor:nesw-resize; touch-action:none"></div>
+<div data-crop-handle="sw" class="absolute rounded-full" style="bottom:0; left:0; width:14px; height:14px; transform:translate(-4px,4px); background:rgb(var(--ed-accent)); cursor:nesw-resize; touch-action:none"></div>
+<div data-crop-handle="se" class="absolute rounded-full" style="bottom:0; right:0; width:14px; height:14px; transform:translate(4px,4px); background:rgb(var(--ed-accent)); cursor:nwse-resize; touch-action:none"></div>
+</div>
+</div>
+<div class="flex flex-wrap gap-4 justify-end mt-6">
+<button type="button" id="cover-crop-use-original" class="ed-btn-text tap-target px-6 py-2">Dùng ảnh gốc</button>
+<button type="button" id="cover-crop-cancel" class="ed-btn-text tap-target px-6 py-2">Huỷ</button>
+<button type="button" id="cover-crop-apply" class="ed-btn-primary tap-target">Cắt và tải lên</button>
+</div>
+</div>
+</div>
+
+<script src="/js/api.js"></script>
+<!-- Media library: supplies openMediaPicker(), which write.js awaits when the
+     author picks an image from the library instead of uploading a new one. -->
+<script src="/js/media.js"></script>
+<script src="/js/write.js"></script>
+</body>
+</html>

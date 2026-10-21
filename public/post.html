@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-name="Chi tiết bài viết">Chi tiết bài viết - AnonyHT</title>
+<meta name="theme-color" content="#f6f1e7" data-theme-color-dark="#1e1a16">
+<!-- Favicon do admin đặt (Bảng quản trị > Quản lí trang chủ). server/render-html.js
+     điền href từ bảng settings trước khi gửi; giá trị trống hoặc chưa đặt thì bỏ cả thẻ. -->
+<link rel="icon" data-setting-href="favicon">
+<!-- Theme switch. MUST stay here - blocking, in <head>, ahead of the
+     stylesheets - so <html class="dark"> is set before the first paint.
+     Deferring it (or folding it into api.js at the end of <body>) brings back
+     the white flash on every navigation. -->
+<script src="/js/theme.js"></script>
+
+<!-- Fonts. Both families are SELF-HOSTED in /css/fonts.css, which
+     scripts/fetch-fonts.py generates: Inter as the static faces
+     Google serves per unicode-range (latin / latin-ext / vietnamese - the
+     three a page of Vietnamese prose actually selects), Material Symbols as a
+     subset of just the icons in use. Same-origin is the point: the first paint
+     waits on no third party, the faces are discovered while this
+     render-blocking stylesheet parses, and the hashed filenames are what lets
+     server.js serve /fonts/ as immutable for a year.
+     The two font-display values differ because the families fail differently.
+     An icon is a LIGATURE - the markup contains the word "search" and the font
+     turns it into a glyph - so block hides nothing-yet instead of printing the
+     word while the subset arrives. Body text swaps, because its fallback stack
+     is already readable text at the right size.
+     The faces the first paint sets text in are preloaded between the
+     @generated markers below; fetch-fonts.py rewrites their hashed hrefs. -->
+<link href="/css/fonts.css" rel="stylesheet">
+<!-- @font-face alone does not start a download until the layout needs a glyph,
+     which on the icon font means icons stay invisible for an extra round-trip
+     (display:block draws nothing), so the faces the first screen needs are
+     preloaded: the icon subset, plus the body family's 400 in the two
+     unicode-ranges Vietnamese prose is actually set in - latin and vietnamese,
+     which is why two, and why not the 700: body text is the first paint,
+     headings at worst the one after. `crossorigin` is required even
+     same-origin - fonts are always fetched anonymously, and a preload that
+     does not match the mode is simply downloaded twice.
+     The hrefs are hashed and therefore GENERATED - `npm run fetch:fonts`
+     rewrites everything between the markers below. Do not edit them by hand. -->
+<!-- @generated:font-preload -->
+<link as="font" crossorigin href="/fonts/material-symbols-subset.c7d51076.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-latin.3100e775.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-vietnamese.5c66f9e0.woff2" rel="preload" type="font/woff2">
+<!-- /@generated:font-preload -->
+
+<!-- Editorial redesign (shared with index.html) - see css/editorial.css.
+     Newsreader is the headline display serif; preloaded here for the same
+     reason as the two Inter faces above: the article's own H1 is
+     set in it and is close to the first paint. Not @generated - hand-
+     maintained, this file is not part of the shared fetch-fonts.py pipeline. -->
+<link as="font" crossorigin href="/fonts/newsreader-n-400-latin.62981321.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/newsreader-n-400-vietnamese.f0dcc979.woff2" rel="preload" type="font/woff2">
+
+<!-- Design tokens, then the utilities. tailwind.css is COMPILED (see
+     tailwind.config.js + `npm run build:css`), replacing
+     <script src="https://cdn.tailwindcss.com">, which was not a stylesheet at
+     all but a 451 KB compiler: it parsed the DOM and only then generated and
+     appended a <style>. Until that finished not one utility existed - including
+     `.hidden`, which common.css does not define - so every element the markup
+     had hidden was painted and the page was a bare stack of unstyled text.
+     That is the other half of the flash.
+     Load order is deliberate: the CDN appended its <style> at the END of
+     <head>, after common.css, so keeping tailwind.css last preserves exactly
+     the cascade the pages were built against. -->
+<link href="/css/common.css" rel="stylesheet">
+<!-- Embedded video / map / player styling (.rich-embed). Shared with the editor
+     so an embed looks the same while it is being written and once published. -->
+<link href="/css/media.css" rel="stylesheet">
+<link href="/css/tailwind.css" rel="stylesheet">
+<style>
+  /* ---------- Image lightbox ----------
+     Clicking any picture in the article - the cover, an image block, or one
+     inline inside a paragraph - opens it over the whole screen, zoomable and
+     draggable. Hand-written CSS, because `tailwindcss` is not installed on this
+     box and a utility class nobody compiled is silently no styles at all.
+     Tokens only (--c-*), so the dark theme needs no second copy; the backdrop is
+     --c-scrim, the same variable the auth modal sits on. */
+
+  /* `.hidden` is one class and comes from tailwind.css, which this block is
+     loaded AFTER - so `display` is set under :not(.hidden) everywhere instead of
+     on the element itself. Otherwise the overlay would win the cascade and be
+     permanently on screen. Same trap as #viewall-pager on viewall.html. */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    /* Above the top nav (z-50) and the account dropdown hanging off it. */
+    z-index: 100;
+    background: var(--c-scrim);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .lightbox:not(.hidden) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The article's pictures are the lightbox's handles, so they say so with the
+     cursor rather than leaving it to be discovered by accident. A picture the
+     author wrapped in a link keeps the link's cursor: clicking it navigates. */
+  #post-cover,
+  #post-body img { cursor: zoom-in; }
+  #post-body a img { cursor: pointer; }
+  /* Keyboard readers get the same affordance: an image turned into a button
+     shows the focus ring the rest of the site uses. */
+  #post-body img:focus-visible,
+  #post-cover:focus-visible {
+    outline: 2px solid rgb(var(--c-primary));
+    outline-offset: 2px;
+  }
+
+  /* The picture lives in a stage that fills the overlay: the image is centred by
+     flexbox and moved only by its own transform, so zooming and panning never
+     fight the layout. touch-action:none hands the gestures to the code - without
+     it a phone scrolls the page underneath instead of panning the picture. */
+  .lightbox-stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    touch-action: none;
+    cursor: zoom-in;
+  }
+  .lightbox-stage.is-zoomed { cursor: grab; }
+  .lightbox-stage.is-dragging { cursor: grabbing; }
+  .lightbox-img {
+    max-width: 92vw;
+    max-height: 84vh;
+    object-fit: contain;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-lift);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    will-change: transform;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* While dragging, a transition makes the picture lag behind the finger. */
+  .lightbox-stage.is-dragging .lightbox-img { transition: none; }
+
+  /* Two floating bars. They span the overlay but take no clicks except on their
+     own controls, so the reader can still grab the picture behind the empty
+     space either side of a button. */
+  .lightbox-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    pointer-events: none;
+  }
+  .lightbox-bar > * { pointer-events: auto; }
+  .lightbox-bar--top { top: 0; }
+  .lightbox-bar--bottom {
+    bottom: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    text-align: center;
+  }
+
+  .lightbox-tools { display: flex; align-items: center; gap: 0.375rem; }
+  .lightbox-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.625rem;
+    border: 1px solid rgb(var(--c-outline-variant) / 0.6);
+    border-radius: 9999px;
+    background: rgb(var(--c-surface-container) / 0.85);
+    color: rgb(var(--c-on-surface));
+    font-family: var(--font-vi-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  }
+  .lightbox-btn:hover:not(:disabled) {
+    border-color: rgb(var(--c-electric-indigo) / 0.55);
+    color: rgb(var(--c-primary));
+  }
+  .lightbox-btn:active:not(:disabled) { transform: scale(0.96); }
+  .lightbox-btn:focus-visible {
+    outline: 2px solid rgb(var(--c-primary));
+    outline-offset: 2px;
+  }
+  .lightbox-btn:disabled { opacity: 0.4; cursor: default; }
+  .lightbox-btn .material-symbols-outlined { font-size: 20px; }
+  /* The zoom read-out doubles as "back to fitting the screen". Tabular figures,
+     so 9% and 100% do not make the pill change width as it counts. */
+  .lightbox-zoom {
+    min-width: 3.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lightbox-counter,
+  .lightbox-caption,
+  .lightbox-hint {
+    font-family: var(--font-vi-sans);
+    color: rgb(var(--c-on-surface-variant));
+  }
+  .lightbox-counter:not(.hidden) {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    background: rgb(var(--c-surface-container) / 0.85);
+    border: 1px solid rgb(var(--c-outline-variant) / 0.6);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  /* The author's caption, when the image block had one. */
+  .lightbox-caption:not(.hidden) {
+    display: block;
+    max-width: min(60ch, 88vw);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: rgb(var(--c-on-surface));
+  }
+  .lightbox-hint {
+    font-size: 0.75rem;
+    color: rgb(var(--c-outline));
+  }
+
+  /* Previous / next picture, either side of the stage. */
+  .lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+  .lightbox-nav:not(.hidden) { display: inline-flex; }
+  .lightbox-nav--prev { left: 0.625rem; }
+  .lightbox-nav--next { right: 0.625rem; }
+
+  /* A phone has no hover and less room either side of a 96vw picture, so the
+     arrows shrink and tuck into the edges - and a swipe turns the page as well.
+     Shrunk, not hidden: they are in the tab order, and a control a keyboard can
+     reach has to be a control anybody can see. */
+  @media (max-width: 639px) {
+    .lightbox-img { max-width: 96vw; max-height: 76vh; }
+    .lightbox-nav { min-width: 2.25rem; height: 2.25rem; }
+    .lightbox-nav--prev { left: 0.25rem; }
+    .lightbox-nav--next { right: 0.25rem; }
+    .lightbox-bar { padding: 0.5rem 0.625rem; }
+    .lightbox-hint { font-size: 0.6875rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lightbox-img { transition: none; }
+    .lightbox-btn:active:not(:disabled) { transform: none; }
+  }
+
+  /* ---------- Back to top ----------
+     The right-hand end of the row the like/dislike pair sits on. The pill itself
+     is .reaction-btn from common.css, so it is the same height, radius, hover
+     and - since 2026-09-11 - the same FRAMELESS rest as the two votes beside it,
+     with no second copy of that CSS to drift away from; only its place in the
+     row and its click feedback are declared here. */
+  .to-top-btn {
+    /* What holds it against the right margin - including on the second line when
+       a narrow screen wraps the row, which justify-between cannot manage: a
+       wrapped line holds one item, and one item sits at the start. */
+    margin-left: auto;
+  }
+  /* The click feedback a frameless pill needs: with no rim to press against, the
+     button answers a click by growing and settling, which reads as "taken" even
+     though the page is already scrolling away from it. The class is added by
+     post.js on click and taken off on animationend, so a second click mid-flight
+     restarts it instead of being swallowed. Transform only - no colour, no
+     layout - so both themes get it for free. */
+  @keyframes to-top-pulse {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+  }
+  .to-top-btn--pulse { animation: to-top-pulse 0.45s ease; }
+  @media (prefers-reduced-motion: reduce) {
+    .to-top-btn--pulse { animation: none; }
+  }
+  /* Floating mode: added by post.js once the reader has scrolled past one
+     viewport of the article AND the action row itself (this button's normal,
+     in-flow home) is not yet on screen. .glass-panel is the site's own
+     frosted-card recipe (--c-glass-surface/--c-glass-border, blur(12px)) -
+     reused rather than re-declared, so this button is frosted the same way
+     every other floating surface in the redesign is. Removed the moment the
+     action row scrolls into view, which returns the button to the exact
+     static position in that row it already occupied - "settling" there reads
+     as arriving home rather than as a second copy appearing.
+     No `right` here on purpose: post.js sets it inline (placeFloatingRight())
+     to the action row's own measured right edge, which is not a fixed
+     distance from the viewport once the reading column gets a sidebar
+     beside it above 1024px (see .post-layout below) - a constant right
+     value here would float the pill past the sidebar into the margin
+     instead of over the column it belongs to. */
+  .to-top-btn--floating {
+    position: fixed;
+    bottom: 1.25rem;
+    z-index: 40;
+    /* Overrides the inline row's margin-left:auto, which has nothing to push
+       against once this is out of flow. */
+    margin-left: 0;
+    background: var(--c-glass-surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--c-glass-border);
+    box-shadow: var(--shadow-ambient);
+  }
+  @media (max-width: 479px) {
+    .to-top-btn--floating { bottom: 1rem; }
+  }
+
+  /* ---------- Reading layout: article left, suggestions right ----------
+     The article column starts at the same left edge as the brand in the top
+     nav - both are max-w-7xl containers with the same page padding - and every
+     line of it, title and captions included, runs left-aligned instead of
+     centred on the page. The suggestions move out of the flow under the
+     article into a narrow column of their own at the right, stacked top to
+     bottom the way a news sidebar reads, and hold still while the article
+     scrolls past them. Below 1024px a second column would squeeze the text
+     instead of framing it, so there the list falls back under the article. */
+  /* The reading column's two numbers, held once on the article because TWO grids on
+     this page have to agree on them: the article's own (.post-layout) and the
+     comments' (.post-comments, below). A sidebar 21rem wide beside the article and
+     20rem beside the comment box is a seam the reader can see, and it is the kind of
+     seam that only shows up on one page width. */
+  #post-article {
+    --reading-sidebar: 21rem;
+    --reading-gap: 2.5rem;
+  }
+  .post-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+  /* The 40px rhythm these children used to take from #post-content's gap-lg:
+     they are a column of their own now, so the column carries it. */
+  .post-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--reading-gap);
+    min-width: 0;
+  }
+
+  /* ---------- Comments ----------
+     The comment box and its "Gửi" button take the ARTICLE's column rather than the
+     full width of the page. The section is a sibling of .post-layout, so it spanned
+     both tracks: with suggestions on screen the textarea ran 21rem + 2.5rem wider
+     than the article it responds to, and the button hung at the right-hand margin,
+     under the sidebar. Same grid and the same two numbers, so the box you type into
+     is exactly as wide as the text you have just read.
+     The second track is empty ON PURPOSE - reserving it is what makes the first one
+     the width of the article's, which is the only way to match a track that is
+     itself `minmax(0, 1fr)` rather than a fixed measure. */
+  .post-comments {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* The heading, the form and the list all stay in the reading column. min-width:0
+     for the reason the article's own track has it: a grid item will not shrink below
+     its min-content, and a textarea's min-content is wider than a narrow track. */
+  .post-comments > * {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .post-layout,
+    .post-comments {
+      grid-template-columns: minmax(0, 1fr) var(--reading-sidebar);
+      column-gap: var(--reading-gap);
+    }
+    /* Under the fixed 4rem nav with a line of air, and scrolling inside the
+       leftover height so a short window still reaches the last row. */
+    .post-sidebar {
+      position: sticky;
+      top: 5.5rem;
+      max-height: calc(100vh - 6.5rem);
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+  }
+  /* Nothing to suggest means the article keeps the full width instead of carrying a
+     column of nothing beside it - and the comments under it follow, because one
+     condition read off the article is what decides for both grids. Keyed on
+     #post-article rather than on each grid's own contents: the comments section has
+     no .related-section to ask, and asking the article is asking the only element
+     that knows. */
+  #post-article:has(.related-section.hidden) .post-layout,
+  #post-article:has(.related-section.hidden) .post-comments {
+    grid-template-columns: minmax(0, 1fr);
+    /* ...but not the full 76rem of the page: a line of prose (and a picture
+       beside it) that wide reads as scattered. 52rem is the article's own
+       width when the suggestions sidebar IS there (80rem - 21rem - 2.5rem,
+       less the page padding), so a post reads the same width either way. */
+    max-width: 52rem;
+    margin-inline: auto;
+    width: 100%;
+  }
+  /* ...and no empty block under it on a phone either. */
+  .post-sidebar:has(.related-section.hidden) { display: none; }
+
+  /* ---------- Read next ----------
+     One post per row - square thumb at the left, title at the right - rather
+     than the three-across cards the row under the article used: a 21rem
+     column has no room for a card grid, and a list is what a sidebar reads
+     as. post.js still orders the rows (same "Thẻ (tag)" first, newest topping
+     up) and still hides the whole section when there is nothing to suggest. */
+  .related-section:not(.hidden) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+  .related-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .related-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    /* Rows, not cards: the glass chrome .glass-card brings would turn six of
+       them into a wall of boxes. These lines take it back off; the hover tint
+       below says "row" just as well. */
+    background: none;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: background-color 0.16s ease;
+  }
+  .related-card:hover { background: rgb(var(--c-surface-container) / 0.6); }
+  .related-card:focus-visible {
+    outline: 2px solid rgb(var(--c-primary));
+    outline-offset: 2px;
+  }
+  .related-thumb {
+    display: block;
+    flex: 0 0 auto;
+    width: 4.5rem;
+    height: 4.5rem;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    background: rgb(var(--c-surface-container-high));
+  }
+  .related-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .related-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    padding: 0;
+  }
+  /* The tag pill and the date/views line belong to the wide card grid; in a
+     21rem column they would cost the title - the reason the row exists - a
+     line or two of its three. */
+  .related-tag,
+  .related-facts { display: none; }
+  .related-title {
+    color: rgb(var(--c-on-surface));
+    font-family: var(--font-vi-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.45;
+    /* Three lines, then an ellipsis, so one long title cannot make its row
+       taller than its neighbours. */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .related-card:hover .related-title { color: rgb(var(--c-primary)); }
+  /* The list's heading reads as a sidebar head: a rule under it instead of
+     the open space a section title gets in the flow of the page. */
+  #related-title {
+    padding-bottom: 0.625rem;
+    border-bottom: 1px solid rgb(var(--c-outline-variant) / 0.4);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .related-card { transition: none; }
+  }
+</style>
+
+<!-- Editorial redesign (shared with index.html) - see css/editorial.css.
+     Loaded LAST, after the page's own <style> block above: several rules
+     there (#related-title, .related-card, ...) share a selector with one of
+     editorial.css's retint rules at the SAME specificity, and CSS breaks that
+     tie by source order - editorial.css has to come after them to win, not
+     before. -->
+<link href="/css/editorial.css" rel="stylesheet">
+<!-- The "Bố cục ảnh" layouts (img-side, split, gallery-*) and the 80vh cap on
+     every article picture. After editorial.css so its .prose-content rules win. -->
+<link href="/css/image-layouts.css" rel="stylesheet">
+</head>
+<body class="editorial-page font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col relative">
+
+<!-- Reading progress bar -->
+<div class="reading-progress-container ed-progress-track">
+<div class="reading-progress-bar ed-progress-bar" id="reading-progress"></div>
+</div>
+
+<!-- TopNavBar -->
+<nav class="ed-nav fixed top-0 w-full z-50">
+<div class="flex justify-between items-center h-16 px-sm md:px-margin-page w-full max-w-7xl mx-auto gap-6">
+<div class="flex items-center gap-6">
+<button class="ed-icon-btn ed-hamburger-btn flex items-center justify-center p-1.5" type="button" data-action="mobile-nav-toggle" aria-label="Mở menu điều hướng"><span class="material-symbols-outlined">menu</span></button>
+<!-- data-brand-name sits on the INNER span, not this <a>: applySiteBranding()
+     in js/api.js does el.textContent = ... on every [data-brand-name] element,
+     which would otherwise wipe out the accent dot sibling (see index.html). -->
+<a class="group inline-flex items-baseline gap-1.5" href="/index.html" id="nav-brand">
+<span class="ed-wordmark" data-brand-name>TuanPA</span>
+</a>
+<div class="ed-nav-links">
+<a class="ed-nav-link" href="/index.html">Trang chủ</a>
+<a class="ed-nav-link" href="/viewall.html">Tất cả bài viết</a>
+<a class="ed-nav-link" href="/about.html">Về tác giả</a>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<div class="relative hidden sm:block" id="header-search-wrap">
+<span class="material-symbols-outlined ed-icon-faint absolute left-3 top-1/2 -translate-y-1/2 text-[16px] pointer-events-none">search</span>
+<input id="search-input" type="text" placeholder="Tìm kiếm bài viết..." aria-label="Tìm kiếm bài viết" class="ed-search pl-8 pr-1 py-1.5 font-body-sm text-body-sm w-40 lg:w-56">
+</div>
+<button class="ed-icon-btn sm:hidden flex items-center justify-center p-2" id="header-search-toggle" title="Tìm kiếm" data-action="search-toggle"><span class="material-symbols-outlined">search</span></button>
+<div class="ed-nav-divider hidden sm:block" aria-hidden="true"></div>
+<a data-writer-only href="/write.html" aria-label="Viết bài" class="ed-btn-primary ed-nav-write inline-flex text-[12px]">
+<span class="material-symbols-outlined">edit_note</span>Viết bài
+</a>
+<div class="relative">
+<button id="nav-avatar-btn" class="ed-avatar-btn overflow-hidden flex items-center justify-center active:scale-95 transition-transform" title="Tài khoản" data-action="nav-dropdown">
+<img alt="Ảnh đại diện" class="w-full h-full object-cover hidden" id="nav-avatar-img">
+<span class="material-symbols-outlined ed-icon-soft text-[18px]" id="nav-avatar-placeholder">person</span>
+</button>
+<div class="ed-dropdown-panel absolute right-0 mt-2 w-56 z-50 hidden origin-top-right" id="user-dropdown-menu"></div>
+</div>
+</div>
+</div>
+</nav>
+
+<!-- Search Overlay -->
+<div class="ed-search-overlay hidden sm:hidden fixed top-16 left-0 w-full z-40" id="search-overlay">
+<div class="max-w-7xl mx-auto px-sm md:px-margin-page py-4 flex items-center gap-4">
+<span class="material-symbols-outlined ed-icon-faint">search</span>
+<input class="ed-search flex-grow min-w-0 border-none py-1 font-body-lg text-body-lg" id="search-input-mobile" placeholder="Tìm kiếm bài viết..." type="text">
+<button class="ed-icon-btn shrink-0 w-11 h-11 flex items-center justify-center" aria-label="Đóng tìm kiếm" data-action="search-close"><span class="material-symbols-outlined">close</span></button>
+</div>
+</div>
+
+<!-- Main Content Area -->
+<main class="flex-grow pt-24 md:pt-28 pb-lg px-sm md:px-margin-page w-full max-w-7xl mx-auto flex flex-col gap-lg">
+<article id="post-article">
+<p id="loading-msg" class="text-on-surface-variant text-center">Đang tải bài viết...</p>
+
+<div id="post-content" class="hidden flex flex-col gap-lg">
+
+<!-- Two columns from 1024px up: the article at the left, starting at the same
+     edge as the brand in the nav, and the suggestions in a sidebar at the
+     right. The <style> in <head> owns the grid (.post-layout); on a phone it
+     is one column and the sidebar simply falls in under the article. -->
+<div class="post-layout">
+<div class="post-main">
+
+<!-- Article Header -->
+<header class="flex flex-col gap-sm items-start">
+<div class="ed-chip cursor-pointer" id="post-tag"></div>
+<h1 class="ed-hero-title" id="post-title"></h1>
+<div class="ed-byline-strip flex flex-wrap items-center gap-x-3 gap-y-2 mt-2 w-full">
+<a class="tap-target flex items-center gap-2 transition-colors" id="post-author-link" href="/about.html" title="Về tác giả">
+<!-- A solid person-with-pencil mark instead of the author's photo: the one who WROTE
+     the piece. Drawn the way this site draws its other non-font marks - the theme
+     glyphs in profile.html, the Google button in api.js - as an inline <svg> in
+     currentColor, because the subsetted Material Symbols font carries no glyph for a
+     person holding a pencil, and an icon the subset does not carry renders as NOTHING
+     at all rather than as a fallback.
+     The pencil is KNOCKED OUT of the shoulder by a mask, so a gap of the page shows
+     between the two shapes the way the reference mark has it; painting the pencil over
+     the shoulder would merge them into one lump at 18px. The mask's white and black are
+     luminance, not paint - neither is a colour the dark theme has to know about.
+     18px, the measure of every other icon in this byline row, and centred on the name
+     by the link's own align-items: the row reads as one line of type carrying four
+     icons, not as a photo frame that lost its picture. -->
+<svg class="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" id="post-author-avatar">
+<mask id="author-glyph-gap">
+<rect width="24" height="24" fill="white"/>
+<path fill="black" transform="translate(9.37 9.86) scale(0.7)" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+</mask>
+<path mask="url(#author-glyph-gap)" transform="translate(0.2 0.2) scale(0.88)" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+<path transform="translate(11.41 11.87) scale(0.53)" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+</svg>
+<!-- The name is the one fact in this byline row that is about a PERSON rather than a
+     count, so it is the one that carries weight. 600 is the browser's own synthesis
+     off the single 400 face this site ships - the same synthesis the whole type scale
+     already runs on, so nothing new is fetched and nothing renders differently from
+     the headings. -->
+<span id="post-author-name" class="font-semibold"></span>
+</a>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">calendar_today</span> <span id="post-date"></span></span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">schedule</span> <span id="post-readtime"></span></span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">visibility</span> <span id="post-views"></span></span>
+</div>
+</header>
+
+<!-- Short summary - the "Tóm tắt ngắn" the author writes in write.html.
+     It used to be visible only on the cards that link here (homepage hero,
+     Xem tất cả, profile) and in the new-post email, so a reader who arrived
+     straight at the article never saw the one line saying what it is about.
+     Set in italic above the cover, between the title and the picture, it reads
+     as the article's own standfirst rather than as body copy. post.js removes
+     it from the page entirely when the post has no summary.
+     No width cap of its own: it takes the article column's full measure, the same
+     one the title, the cover and the body run to. It used to carry max-w-2xl, which
+     left it a 42rem island in a column that is wider than that from lg up - a
+     standfirst narrower than the headline it stands under reads as a leftover
+     rather than as part of the article. -->
+<p class="hidden ed-standfirst" id="post-excerpt"></p>
+
+<!-- Featured Image -->
+<div class="ed-cover w-full">
+<img alt="" class="w-full h-full object-cover" id="post-cover" fetchpriority="high" decoding="async">
+</div>
+
+<!-- Article Content -->
+<div class="prose-content font-body-lg text-body-lg leading-relaxed" id="post-body"></div>
+
+<!-- Post actions: reactions at the left of their row, "back to top" at the right
+     of the same row, then the share + hashtags bar -->
+<div class="flex flex-col gap-sm">
+<!-- Left, not right: `justify-end` was what pushed the pair to the margin. It is
+     simply gone rather than replaced - flex starts at the left edge by default,
+     and `.justify-start` is NOT in the compiled tailwind.css, so naming it would
+     have left the row exactly where it was.
+     `flex-wrap` so the pair and the back-to-top pill can drop onto two lines on a
+     narrow screen instead of squeezing each other. What keeps that pill on the
+     right edge either way is `.to-top-btn { margin-left: auto }` in the <style>
+     above: `justify-between` would put it back on the LEFT once the row wraps,
+     because a wrapped line holds only one item. -->
+<div class="ed-action-bar flex flex-wrap items-center gap-2 sm:gap-3">
+<button id="post-like-btn" class="reaction-btn tap-target" data-value="1" aria-pressed="false" title="Thích bài viết">
+<span class="material-symbols-outlined text-[20px]">thumb_up</span>
+<span class="reaction-count" id="post-like-count">0</span>
+</button>
+<button id="post-dislike-btn" class="reaction-btn reaction-btn--down tap-target" data-value="-1" aria-pressed="false" title="Không thích bài viết">
+<span class="material-symbols-outlined text-[20px]">thumb_down</span>
+<span class="reaction-count" id="post-dislike-count">0</span>
+</button>
+<!-- Reuses .reaction-btn for the pill itself, so it is guaranteed the same height,
+     radius and hover as the two votes beside it instead of a second copy of that
+     CSS drifting away from the first. It is not a vote: no data-value, no
+     aria-pressed, and the label says what it does. -->
+<button id="to-top-btn" class="reaction-btn to-top-btn tap-target" type="button" title="Về đầu trang" aria-label="Về đầu trang">
+<span class="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_upward</span>
+<span class="to-top-label">Về đầu trang</span>
+</button>
+</div>
+
+<!-- Share + hashtags -->
+<div class="flex flex-col md:flex-row gap-md md:items-center justify-between py-sm ed-rule">
+<div class="flex items-center gap-4">
+<span class="ed-kicker">Share:</span>
+<button id="share-btn" class="ed-icon-btn tap-target tap-target--icon inline-flex items-center justify-center" title="Chia sẻ"><span class="material-symbols-outlined">share</span></button>
+<button id="copy-link-btn" class="ed-icon-btn tap-target tap-target--icon inline-flex items-center justify-center" title="Sao chép liên kết"><span class="material-symbols-outlined">link</span></button>
+</div>
+<div class="flex flex-wrap gap-2 md:justify-end" id="post-hashtags"></div>
+</div>
+</div>
+
+<!-- Owner actions -->
+<div class="hidden flex-wrap items-center justify-between gap-3" id="post-owner-actions">
+<a class="tap-target font-label-md text-label-md text-primary uppercase tracking-wider hover:underline" id="edit-post-link" href="#">Chỉnh sửa bài viết</a>
+<button class="tap-target font-label-md text-label-md text-error uppercase tracking-wider hover:underline" id="delete-post-btn">Xoá bài viết</button>
+</div>
+</div><!-- /post-main -->
+
+<!-- Read next, in the sidebar column at the right of the article. post.js
+     fills the list with the posts carrying the same "Thẻ (tag)" as this one,
+     topped up with the newest when that is not enough for the list, and leaves
+     the whole section hidden when there is nothing else to suggest - and with
+     it the sidebar itself, so the article keeps the full width instead of a
+     column of nothing beside it. -->
+<aside class="post-sidebar" aria-label="Gợi ý đọc tiếp">
+<!-- Table of contents - built for real by post.js's buildToc() from the
+     article's own h1/h2/h3 once #post-body is rendered (loadPost() above),
+     not a static list. Hidden below two headings: a TOC with one entry has
+     nothing to navigate between. -->
+<nav class="ed-panel--low rounded p-md mb-md hidden" id="toc-section" aria-label="Mục lục bài viết">
+<h3 class="ed-kicker mb-2">Mục lục</h3>
+<div id="toc-list" class="flex flex-col"></div>
+</nav>
+<section class="related-section hidden" id="related-section" aria-labelledby="related-title">
+<h3 class="font-headline-sm text-headline-sm text-on-surface" id="related-title">Bài viết liên quan</h3>
+<div class="related-grid" id="related-grid"></div>
+</section>
+</aside>
+</div><!-- /post-layout -->
+
+<!-- Comments. .post-comments puts the heading, the box and the list in the article's
+     own column instead of across both tracks of the page - see the <style>. -->
+<section class="post-comments mt-12 pt-12 ed-rule">
+<h3 class="ed-section-title mb-8">Bình luận (<span id="comment-count">0</span>)</h3>
+
+<!-- Comment Input -->
+<div class="flex gap-3 sm:gap-4 mb-10" id="comment-form-wrap">
+<div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-glass-border hidden" id="comment-avatar-wrap">
+<img alt="" class="w-full h-full object-cover" id="comment-avatar">
+</div>
+<div class="flex-grow">
+<textarea id="comment-input" class="w-full p-4 rounded-lg text-body-md font-body-md focus:outline-none transition-all min-h-[100px]" placeholder="Viết bình luận của bạn..."></textarea>
+<div class="flex justify-end mt-2">
+<button id="comment-submit" class="tap-target px-6 py-2 rounded font-label-md text-label-md uppercase tracking-wider hover:opacity-90 transition-opacity active:scale-95">Gửi</button>
+</div>
+<p id="comment-login-hint" class="text-body-sm font-body-sm text-on-surface-variant mt-2 hidden">Vui lòng <button class="text-primary underline" data-action="auth-open">đăng nhập</button> để bình luận.</p>
+</div>
+</div>
+
+<!-- Comments List -->
+<div class="flex flex-col gap-6" id="comments-list"></div>
+</section>
+
+</div>
+</article>
+</main>
+
+<!-- Footer -->
+<!-- Just the copyright line now - Liên hệ/Điều khoản moved up into the nav
+     (see the 5 links in .ed-nav above), so a footer that only ever held those
+     two links plus this line does not need to exist as anything more. -->
+<footer class="ed-footer w-full py-3 mt-auto">
+<div class="text-center px-sm md:px-margin-page max-w-7xl mx-auto font-body-sm text-body-sm">© <span id="footer-year"></span> <span data-footer-text data-fallback="TuanPA.">TuanPA.</span></div>
+</footer>
+
+<!-- Image lightbox. post.js opens it when a picture in the article is clicked;
+     until then it carries .hidden and nothing inside it takes part in the page.
+     The zoom read-out is itself a button (click it to go back to fitting the
+     screen), the arrows walk the article's pictures, and Esc or a click on the
+     empty backdrop closes it.
+     +/- are plain ASCII rather than U+2212 and U+2013: the Vietnamese webfont is
+     a subset built from the characters the pages actually use, and a glyph that
+     is not in it falls back to whatever the system has. -->
+<div class="lightbox hidden" id="lightbox" role="dialog" aria-modal="true" aria-label="Xem ảnh phóng to">
+<div class="lightbox-stage" id="lightbox-stage">
+<img alt="" class="lightbox-img" id="lightbox-img" draggable="false">
+</div>
+
+<button class="lightbox-btn lightbox-nav lightbox-nav--prev hidden" id="lightbox-prev" type="button" aria-label="Ảnh trước"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></button>
+<button class="lightbox-btn lightbox-nav lightbox-nav--next hidden" id="lightbox-next" type="button" aria-label="Ảnh sau"><span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></button>
+
+<div class="lightbox-bar lightbox-bar--top">
+<span class="lightbox-counter hidden" id="lightbox-counter"></span>
+<div class="lightbox-tools">
+<button class="lightbox-btn" id="lightbox-zoom-out" type="button" aria-label="Thu nhỏ">-</button>
+<button class="lightbox-btn lightbox-zoom" id="lightbox-zoom-level" type="button" aria-label="Đặt lại cỡ vừa khung hình">100%</button>
+<button class="lightbox-btn" id="lightbox-zoom-in" type="button" aria-label="Phóng to">+</button>
+<button class="lightbox-btn" id="lightbox-close" type="button" aria-label="Đóng (Esc)"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+</div>
+</div>
+
+<div class="lightbox-bar lightbox-bar--bottom">
+<p class="lightbox-caption hidden" id="lightbox-caption"></p>
+<p class="lightbox-hint">Click -/+ hoặc lăn chuột để zoom · Giữ chuột và kéo ảnh để xem chi tiết · Esc để đóng ảnh</p>
+</div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/post.js"></script>
+</body>
+</html>

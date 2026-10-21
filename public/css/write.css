@@ -1,0 +1,1373 @@
+body {
+  /* Flat like every other page since 2026-09-11: the 135deg wash this used to
+     carry was the same gradient backdrop the reader asked to have removed. */
+  background-color: rgb(var(--c-background));
+  min-height: 100vh;
+}
+/* Editor panel: lighter shadow than the shared .glass-panel so the three-card
+   canvas doesn't look heavier than the rest of the site. */
+.glass-panel { box-shadow: var(--shadow-editor); }
+/* Subtle inputs that brighten on focus - the template's form treatment. */
+.input-glass {
+  background-color: var(--c-field);
+  border: 1px solid rgb(var(--c-outline-variant));
+  color: rgb(var(--c-on-surface));
+  transition: all 0.3s ease;
+}
+.input-glass:focus {
+  background-color: rgb(var(--c-surface-container-lowest));
+  border-color: rgb(var(--c-electric-indigo));
+  box-shadow: 0 0 0 2px rgb(var(--c-electric-indigo) / 0.25);
+  outline: none;
+}
+
+/* ==========================================================================
+   The block editor's chrome
+   Everything below is the EDITOR, not the article: the block shells, the
+   paragraph toolbar and its menus. What the reading page also paints - the
+   marks, the alignment, the leading, the indents - lives in common.css under
+   .rich-text-block / .rt-editor, so the two cannot drift.
+   Hand-written CSS rather than utilities, for the same reason admin.html's user
+   table is: tailwindcss is not installed in node_modules on the server, so
+   `npm run build:css` cannot run and a NEW Tailwind class compiles to nothing.
+   Every class the markup still uses was checked against the 601 already in
+   public/css/tailwind.css.
+   The material is one recipe, taken from .glass-panel and the role picker in
+   admin.html: a 180deg gradient between two alphas of ONE colour (denser at the
+   top, so the light always comes from above), a 1px inset highlight along the
+   top edge, and a border in outline-variant. Never a gradient between two colour
+   ROLES - on the light theme --c-primary is darker than --c-electric-indigo and
+   on the dark theme it is lighter, so the same ramp would light the pill from
+   below as soon as the theme flipped.
+   ========================================================================== */
+
+/* ---- The block shell ---- */
+.rt-block {
+  border-radius: 1rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  background: linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1));
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  padding: 0.75rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+/* No backdrop-filter here: the block sits INSIDE .glass-panel, which already
+   blurs at 12px, and a second blur over the first buys nothing but a stacking
+   context. The floating menus below are the one thing that blurs its own
+   backdrop, because they are the only surface that opens over page content. */
+.rt-block:focus-within {
+  border-color: rgb(var(--c-electric-indigo) / 0.45);
+  box-shadow: var(--glass-inset), var(--shadow-focus);
+}
+@media (min-width: 640px) { .rt-block { padding: 1rem; } }
+
+/* The block's own header row: what kind of block this is, and the three
+   reorder/delete controls. */
+.rt-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.625rem;
+}
+.rt-block-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--c-primary));
+}
+.rt-block-kind .material-symbols-outlined { font-size: 16px; }
+.rt-block-actions { display: flex; align-items: center; gap: 0.125rem; flex-shrink: 0; }
+/* Quiet until hovered, like .comment-delete-btn: reordering controls should not
+   compete with the text being written. */
+.rt-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 0.5rem;
+  color: rgb(var(--c-on-surface-variant));
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.rt-icon-btn .material-symbols-outlined { font-size: 18px; }
+.rt-icon-btn:hover:not(:disabled) {
+  background: rgb(var(--c-electric-indigo) / 0.1);
+  color: rgb(var(--c-primary));
+}
+.rt-icon-btn--danger:hover:not(:disabled) {
+  background: rgb(var(--c-error) / 0.1);
+  color: rgb(var(--c-error));
+}
+.rt-icon-btn:focus-visible {
+  outline: 2px solid rgb(var(--c-electric-indigo));
+  outline-offset: 1px;
+}
+.rt-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ---- The paragraph toolbar ---- */
+/* A recessed tray rather than a raised one: the buttons on it are the raised
+   things, and two levels of highlight stacked on each other read as neither.
+   Hence the wash order inverted (lighter at the top) and an inset shadow along
+   the top edge instead of --glass-inset's highlight. */
+.rt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem;
+  margin-bottom: 0.625rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.45);
+  background: linear-gradient(180deg, var(--glass-wash-1), var(--glass-wash-2));
+  box-shadow: inset 0 1px 2px rgb(var(--c-outline-variant) / 0.35);
+}
+/* The seam between groups. --glass-seam is a light on the light theme and a pale
+   indigo film on the dark one, which is exactly what a groove between raised
+   pills needs: it reads as the gap the light falls into either way. */
+.rt-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.125rem 0.25rem;
+  background: linear-gradient(180deg, transparent, rgb(var(--c-outline-variant) / 0.6), transparent);
+  flex-shrink: 0;
+}
+/* The pills. One class for a plain command button, whatever it carries - an
+   icon, a letter, or both.
+   Raised at REST, in the same glass .rt-select and .rt-upload are made of - the
+   1px outline-variant rim, the wash-3→wash-2 gradient, --glass-inset over
+   --shadow-pill. There is one toolbar on this page and it lives in the dock,
+   where `.rt-dock .rt-toolbar` strips the recessed tray and the controls sit
+   straight on the dock's own surface: borderless icons next to the bordered
+   "Cỡ chữ" / "Chèn ảnh" dropdowns read as two unrelated kinds of thing on one
+   bar, and the tray comment above already says the buttons are the raised ones.
+   Nothing moves - the border was there all along at 1px transparent, so colouring
+   it changes no button's box, and the bar keeps its exact layout. */
+.rt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.4375rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  background: linear-gradient(180deg, var(--glass-wash-3), var(--glass-wash-2));
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  font-family: var(--font-vi-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
+}
+.rt-btn .material-symbols-outlined { font-size: 18px; }
+/* The rim is drawn now, so hover is no longer what draws it: it goes indigo, the
+   same two properties and the same values .rt-select:hover and .rt-upload:hover
+   use, so all three families answer the pointer identically. */
+.rt-btn:hover {
+  border-color: rgb(var(--c-electric-indigo) / 0.55);
+  color: rgb(var(--c-primary));
+}
+.rt-btn:active { transform: scale(0.94); }
+.rt-btn:focus-visible {
+  outline: 2px solid rgb(var(--c-electric-indigo));
+  outline-offset: 1px;
+}
+/* On/off state. aria-pressed is the single source of truth, as on .reaction-btn,
+   so the tint cannot disagree with what a screen reader announces - and it is
+   set from document.queryCommandState() on every selection change, so the
+   toolbar reflects where the caret actually is rather than what was last
+   clicked. */
+.rt-btn[aria-pressed='true'] {
+  background: linear-gradient(180deg, rgb(var(--c-electric-indigo) / 0.2), rgb(var(--c-electric-indigo) / 0.12));
+  border-color: rgb(var(--c-electric-indigo) / 0.42);
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  color: rgb(var(--c-primary));
+}
+.rt-btn[aria-pressed='true'] .material-symbols-outlined {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+/* The B / I / U / “” labels are the button's own text, so each has to LOOK like
+   what it does - the icon font has no glyph for them in the subset, and a letter
+   set in the body face carries the meaning better than an outline glyph anyway. */
+.rt-btn--bold { font-weight: 800; font-size: 15px; }
+.rt-btn--italic { font-style: italic; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; }
+.rt-btn--underline { text-decoration: underline; text-underline-offset: 2px; font-size: 15px; }
+/* The quotation-mark pill draws the two glyphs it inserts. It borrows the serif
+   face the italic button already uses rather than the body face: at 15px the
+   curly pair set in the body family reads as two small commas with a gap
+   between them, while the serif pair is the shape an author expects the button
+   to write. The negative tracking is what closes that gap - it makes the label
+   look like ONE mark, which is the thing the button is named for.
+   Not an icon, and that is a real constraint rather than a preference: the one
+   quotation-mark ligature the subsetted font carries is format_quote, and it is
+   the BLOCK button's. Two buttons on one bar showing the same picture would not
+   tell the author which of the two quotations they were about to make. */
+.rt-btn--quotemark { font-family: Georgia, 'Times New Roman', serif; font-size: 15px; letter-spacing: -0.08em; }
+
+/* ---- The dropdown triggers (Cỡ chữ / Font / Giãn dòng / Khoảng cách / Cấp) ---- */
+/* The same glass pill as .user-role in admin.html, and for the same reason: this
+   replaced a native <select>, whose popup the OS draws - it could never be made
+   of glass, and on the dark theme it did not even render dark, because
+   `option { background-color: #fff }` overrides what `color-scheme: dark` would
+   have given it. */
+.rt-select {
+  --chevron-down: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3E%3Cpath d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06z'/%3E%3C/svg%3E");
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  height: 2rem;
+  padding: 0 0.4375rem 0 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  background: linear-gradient(180deg, var(--glass-wash-3), var(--glass-wash-2));
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--c-on-surface-variant));
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.rt-select > .material-symbols-outlined { font-size: 16px; flex-shrink: 0; }
+/* The value, which is what the trigger is for: "Lớn", "Nét thanh", "2.0". It
+   truncates rather than growing, so a long label cannot push the chevron off the
+   end of a wrapped toolbar row. */
+.rt-select-value {
+  max-width: 6.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Chevron as a MASK painted with currentColor, so it follows the trigger's own
+   colour and both themes for free - an inline-SVG background-image would carry a
+   fixed fill baked into the data URI. */
+.rt-select::after {
+  content: '';
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: var(--chevron-down) no-repeat center / 13px 13px;
+          mask: var(--chevron-down) no-repeat center / 13px 13px;
+  opacity: 0.7;
+  transition: transform 0.18s ease;
+}
+.rt-select[aria-expanded='true']::after { transform: rotate(180deg); }
+.rt-select:hover { border-color: rgb(var(--c-electric-indigo) / 0.55); color: rgb(var(--c-primary)); }
+.rt-select:focus-visible,
+.rt-select[aria-expanded='true'] {
+  outline: none;
+  border-color: rgb(var(--c-electric-indigo));
+  box-shadow: var(--glass-inset), var(--shadow-focus);
+  color: rgb(var(--c-primary));
+}
+/* A value that is no longer the default gets the same tint as a pressed button,
+   so a paragraph carrying a chosen leading or size can be spotted without
+   opening the menu. */
+.rt-select[data-active='true'] {
+  border-color: rgb(var(--c-electric-indigo) / 0.42);
+  background: linear-gradient(180deg, rgb(var(--c-electric-indigo) / 0.2), rgb(var(--c-electric-indigo) / 0.12));
+  color: rgb(var(--c-primary));
+}
+
+/* ---- The floating menu ---- */
+/* The one surface on this page that opens over PAGE content rather than inside a
+   pane, so it is the one that blurs its own backdrop - and the blur is what buys
+   the translucency: at blur(28px) whatever is behind becomes an indistinct wash,
+   so three layers of glass (two washes over a surface-container-low tint) still
+   hold crisp labels. It also borrows --menu-border from the nav's account menu:
+   a panel floating free of the pane cannot rely on a pale rim.
+   Fixed-position and placed by write.js, because .glass-panel clips its own
+   rounded corners and the sidebar is `position: sticky` - a menu rendered in the
+   toolbar would be cut off at the panel's edge. */
+.rt-menu {
+  position: fixed;
+  z-index: 90;
+  min-width: 11rem;
+  max-width: min(20rem, calc(100vw - 1rem));
+  max-height: min(24rem, calc(100vh - 5rem));
+  overflow-y: auto;
+  padding: 0.375rem;
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1)),
+    rgb(var(--c-surface-container-low) / 0.72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--menu-border);
+  box-shadow: var(--glass-inset), var(--menu-shadow);
+  animation: dropdown-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rt-menu[hidden] { display: none; }
+/* The group heading the user asked for ("tiêu đề"): each menu says what it is
+   setting, so a pill showing only "Lớn" is still unambiguous once open. Not a
+   real heading element - it is inside a role="listbox", where only options are
+   allowed, so it is aria-hidden and the listbox carries an aria-label saying the
+   same thing. */
+.rt-menu-title {
+  padding: 0.25rem 0.5rem 0.375rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--glass-seam);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(var(--c-on-surface-variant));
+}
+.rt-menu-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.4375rem 0.5rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  font-family: var(--font-vi-sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  color: rgb(var(--c-on-surface));
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+}
+.rt-menu-option > .material-symbols-outlined {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: rgb(var(--c-on-surface-variant));
+}
+/* The value in force, named by aria-selected so the tint and the check mark
+   cannot disagree with what a screen reader announces. Declared BEFORE the
+   hover/focus rule below, because the two weigh the same and the later one has
+   to win: hovering the selected option must still light it up like any other. */
+.rt-menu-option[aria-selected='true'] {
+  background: rgb(var(--c-electric-indigo) / 0.09);
+  color: rgb(var(--c-primary));
+  font-weight: 600;
+}
+/* Hover and keyboard highlight land on the same look, so arrowing through the
+   menu feels like moving the pointer. Plain :focus rather than a class write.js
+   keeps in sync: focus really does move into the menu (the options are
+   tabindex="-1" and the arrow keys call focus() on them), which is also what
+   makes Enter and Space work without a keydown handler of their own.
+   The rim is an INSET shadow, not a border: a border would grow the option by 2px
+   the moment it lit up and shunt the menu's height around under the pointer. */
+.rt-menu-option:hover,
+.rt-menu-option:focus {
+  outline: none;
+  background: linear-gradient(180deg, rgb(var(--c-electric-indigo) / 0.18), rgb(var(--c-electric-indigo) / 0.1));
+  box-shadow: var(--glass-inset), inset 0 0 0 1px rgb(var(--c-electric-indigo) / 0.28);
+  color: rgb(var(--c-primary));
+}
+.rt-menu-option:hover > .material-symbols-outlined,
+.rt-menu-option:focus > .material-symbols-outlined { color: rgb(var(--c-primary)); }
+.rt-menu-option-check {
+  margin-left: auto;
+  visibility: hidden;
+  flex-shrink: 0;
+}
+.rt-menu-option[aria-selected='true'] .rt-menu-option-check {
+  visibility: visible;
+  color: rgb(var(--c-primary));
+}
+/* Each option is set in the thing it sets - "Nét thanh" in Georgia, "Lớn" at
+   1.2em, a leading shown over two real lines - so the menu is a specimen sheet
+   rather than a list of words. That is the whole reason these are real DOM
+   elements: an OS-drawn <option> could not do it. The scale is capped below the
+   ratio it names (1.2em for "Lớn", which sets 1.35em in the text) so the xl
+   specimen does not make its row twice the height of the others. */
+.rt-menu-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.rt-menu-sample {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rt-menu-sample--sm { font-size: 0.85em; }
+.rt-menu-sample--md { font-size: 1em; }
+.rt-menu-sample--lg { font-size: 1.2em; }
+.rt-menu-sample--xl { font-size: 1.45em; }
+.rt-menu-sample--sans { font-family: var(--font-vi-sans); }
+/* The specimen shows what picking the option actually sets - see the matching
+   note on .rt-font-serif/.rt-font-mono in common.css for why these are the
+   site's own Newsreader/JetBrains Mono now, not generic Georgia/Courier New. */
+.rt-menu-sample--serif { font-family: 'Newsreader', Georgia, 'Times New Roman', 'Noto Serif', serif; }
+.rt-menu-sample--mono { font-family: 'JetBrains Mono', 'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace; }
+/* The leading specimens need two lines to show anything at all - one line looks
+   identical at 1.35 and at 2.5 - so they wrap instead of truncating, and the
+   NUMBER becomes the label above them. The specimen carries the real .rt-lh-*
+   class, which is why it is scoped under .rt-editor in common.css and repeated
+   here: those selectors are `.rt-editor .rt-lh-*`, and this menu lives in
+   <body>, nowhere near an editor. */
+.rt-menu-sample-lead { display: block; font-weight: 600; }
+.rt-menu-option--lh .rt-menu-sample {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  font-size: 11px;
+}
+.rt-menu-option--lh .rt-menu-sample.rt-lh-tight { line-height: 1.35; }
+.rt-menu-option--lh .rt-menu-sample.rt-lh-snug { line-height: 1.6; }
+.rt-menu-option--lh .rt-menu-sample.rt-lh-normal { line-height: 1.85; }
+.rt-menu-option--lh .rt-menu-sample.rt-lh-relaxed { line-height: 2.15; }
+.rt-menu-option--lh .rt-menu-sample.rt-lh-loose { line-height: 2.5; }
+.rt-menu-sample-hint {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgb(var(--c-on-surface-variant));
+}
+.rt-menu-option:hover .rt-menu-sample-hint,
+.rt-menu-option:focus .rt-menu-sample-hint,
+.rt-menu-option[aria-selected='true'] .rt-menu-sample-hint { color: rgb(var(--c-primary) / 0.75); }
+
+/* ---- The table picker ----
+   The "Bảng" pill's popover: Word's grid - ten across, eight down - where the
+   rectangle under the pointer lights up and the line beneath counts it, then
+   the row/column operations for a table the caret already sits in. The shell
+   is .rt-menu's (same glass, same hand placement, same [hidden] guard), so
+   only the grid and the operations are new here. Taller than a listbox menu,
+   because a grid plus seven operations is what it is: the max-height lifts
+   rather than the content scrolling inside its own well. */
+.rt-table-pop { max-height: min(34rem, calc(100vh - 5rem)); }
+.rt-table-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1.25rem);
+  gap: 3px;
+  padding: 0.25rem 0.25rem 0.5rem;
+}
+.rt-table-cell {
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.7);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.rt-table-cell.is-lit {
+  background: rgb(var(--c-electric-indigo) / 0.35);
+  border-color: rgb(var(--c-electric-indigo) / 0.8);
+}
+.rt-table-cell:focus-visible {
+  outline: 2px solid rgb(var(--c-primary));
+  outline-offset: 1px;
+}
+/* Tabular figures, so "10 × 8" does not shift the line as the count grows. */
+.rt-table-size {
+  padding-bottom: 0.5rem;
+  text-align: center;
+  font-family: var(--font-vi-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgb(var(--c-on-surface-variant));
+  font-variant-numeric: tabular-nums;
+}
+.rt-table-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-top: 1px solid var(--menu-border);
+  padding-top: 0.5rem;
+}
+.rt-table-op {
+  padding: 0.375rem 0.625rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgb(var(--c-on-surface));
+  font-family: var(--font-vi-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+.rt-table-op:hover:not(:disabled),
+.rt-table-op:focus-visible:not(:disabled) {
+  background: rgb(var(--c-surface-container) / 0.7);
+  color: rgb(var(--c-primary));
+}
+.rt-table-op:disabled { opacity: 0.45; cursor: default; }
+/* Deleting the table is the one operation here that cannot be undone by
+   pressing something else, so it is the one that borrows the error ink. */
+.rt-table-op[data-op='delete'] { color: rgb(var(--c-error)); }
+.rt-table-op[data-op='delete']:hover:not(:disabled),
+.rt-table-op[data-op='delete']:focus-visible:not(:disabled) {
+  background: rgb(var(--c-error) / 0.12);
+  color: rgb(var(--c-error));
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-table-op { transition: none; }
+}
+
+/* ---- The editor surface itself ---- */
+/* Recessed, so the text sits IN the block rather than on it: a page being
+   written into is a well, and the toolbar above is the raised thing. The type
+   itself comes from .rt-editor in common.css, shared with .rich-text-block on
+   the reading page - that shared base is what makes "Cỡ chữ" show the same size
+   here as it will once published. */
+.rt-surface {
+  width: 100%;
+  min-height: 8.5rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.5);
+  background: rgb(var(--c-surface-container-lowest) / 0.75);
+  box-shadow: inset 0 1px 3px rgb(var(--c-outline-variant) / 0.35);
+  color: rgb(var(--c-on-surface));
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.rt-surface:focus {
+  outline: none;
+  border-color: rgb(var(--c-electric-indigo) / 0.6);
+  background: rgb(var(--c-surface-container-lowest) / 0.92);
+  box-shadow: inset 0 1px 3px rgb(var(--c-outline-variant) / 0.2), var(--shadow-focus);
+}
+
+/* execCommand('fontSize') writes <font size="N">, an ABSOLUTE step off the
+   browser's default (2=13px, 3=16px, 5=24px, 7=48px) - blind to the 1.2rem the
+   editor is set at and to its step down to 1.0625rem on a phone. Those steps are
+   restyled here to the SAME `em` ratios that .rt-size-* uses in common.css, which
+   is what makes the editor an accurate preview: api.js translates the <font> into
+   .rt-size-* on save, so a run set to "Lớn" is 1.35x its paragraph in both
+   places. `!important` is needed because a size ATTRIBUTE is a presentational
+   hint the engine applies at author level; a plain selector loses to it. */
+.rt-editor font[size='1'],
+.rt-editor font[size='2'] { font-size: 0.85em !important; }
+.rt-editor font[size='3'],
+.rt-editor font[size='4'] { font-size: 1em !important; }
+.rt-editor font[size='5'] { font-size: 1.35em !important; }
+.rt-editor font[size='6'],
+.rt-editor font[size='7'] { font-size: 1.75em !important; }
+
+/* The hint under each editor. */
+.rt-hint {
+  margin-top: 0.5rem;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgb(var(--c-on-surface-variant));
+}
+.rt-hint strong { font-weight: 600; color: rgb(var(--c-primary)); }
+/* Live word/character count, right-aligned against the hint. */
+.rt-count {
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rt-footer { display: flex; align-items: flex-start; gap: 0.5rem; }
+
+/* ---- The heading and image blocks ---- */
+/* Same field treatment as .rt-surface so a title, a caption and a paragraph read
+   as three inputs on one form rather than three different widgets. */
+.rt-field {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.5);
+  background: rgb(var(--c-surface-container-lowest) / 0.75);
+  box-shadow: inset 0 1px 3px rgb(var(--c-outline-variant) / 0.35);
+  font-family: var(--font-vi-sans);
+  font-size: 14px;
+  color: rgb(var(--c-on-surface));
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.rt-field::placeholder { color: rgb(var(--c-outline)); }
+.rt-field:focus {
+  outline: none;
+  border-color: rgb(var(--c-electric-indigo) / 0.6);
+  background: rgb(var(--c-surface-container-lowest) / 0.92);
+  box-shadow: inset 0 1px 3px rgb(var(--c-outline-variant) / 0.2), var(--shadow-focus);
+}
+/* The heading input is set in the size it will publish at, so H1 vs H3 is
+   visible in the editor rather than only in the dropdown's label. */
+.rt-field--h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.25; }
+.rt-field--h2 { font-size: 1.375rem; font-weight: 700; line-height: 1.3; }
+.rt-field--h3 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+
+/* The image block's own controls. */
+.rt-image-preview {
+  width: 100%;
+  max-height: 18rem;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.5);
+  margin-bottom: 0.75rem;
+}
+.rt-image-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 8rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px dashed rgb(var(--c-outline-variant));
+  color: rgb(var(--c-on-surface-variant));
+  font-size: 13px;
+}
+/* The upload button is a <label> wrapping a hidden file input, so it needs the
+   pill treatment spelled out rather than inherited from .rt-btn - a label is not
+   a button and picks up none of Preflight's button rules. */
+.rt-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  background: linear-gradient(180deg, var(--glass-wash-3), var(--glass-wash-2));
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  font-family: var(--font-vi-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+.rt-upload .material-symbols-outlined { font-size: 16px; }
+.rt-upload:hover { border-color: rgb(var(--c-electric-indigo) / 0.55); color: rgb(var(--c-primary)); }
+/* :focus-within, not :focus-visible: the focus lands on the <input type="file">
+   inside, which is display:none-adjacent and never draws a ring of its own.
+   :focus-visible is here as well because .rt-upload is now also used on a real
+   <button> ("Thư viện"), which takes the focus itself and matches neither
+   :focus-within nor the label case. */
+.rt-upload:focus-within,
+.rt-upload:focus-visible {
+  outline: 2px solid rgb(var(--c-electric-indigo));
+  outline-offset: 1px;
+}
+
+/* Below lg the pointer is a finger, so the toolbar's 32px pills go up to the
+   ~44px both Apple and Material ask for - the same trade .tap-target makes in
+   common.css, applied here to the controls this page adds. The toolbar keeps its
+   own gap: at 44px a wrapped row of 20 buttons needs the rows to stay distinct. */
+@media (max-width: 1023px) {
+  .rt-btn { min-width: 2.75rem; height: 2.75rem; }
+  .rt-btn .material-symbols-outlined { font-size: 20px; }
+  .rt-select { height: 2.75rem; padding: 0 0.625rem 0 0.75rem; font-size: 13px; }
+  .rt-icon-btn { width: 2.75rem; height: 2.75rem; }
+  .rt-toolbar { gap: 0.3125rem; }
+  .rt-menu-option { padding: 0.625rem 0.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-btn, .rt-select, .rt-menu-option, .rt-surface, .rt-field, .rt-block { transition: none; }
+  .rt-btn:active { transform: none; }
+  .rt-menu { animation: none; }
+}
+
+/* ---- The "+ Văn bản / + Tiêu đề / + Ảnh" group ---- */
+/* The same recessed tray as .rt-toolbar, so the two rows of controls on this page
+   are made of one material: the tray is the groove, the pills on it are raised. */
+.rt-add-group {
+  display: flex;
+  /* Without wrap the four pills sit on one line whose min-content is the sum of
+     their labels - about 440px - and on a phone the tray cannot shrink that far,
+     so the last pill (+ NHÚNG) poked out of the tray and widened the whole page.
+     Wrapping turns it into a 2×2 grid below 640px instead. */
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.45);
+  background: linear-gradient(180deg, var(--glass-wash-1), var(--glass-wash-2));
+  box-shadow: inset 0 1px 2px rgb(var(--c-outline-variant) / 0.35);
+}
+.rt-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  /* Two pills per row on a phone (the 0.125rem is half the gap); from 640px the
+     media query below makes them size to their label on one row. */
+  flex: 1 1 calc(50% - 0.125rem);
+  min-height: 2.25rem;
+  padding: 0 0.625rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  font-family: var(--font-vi-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
+}
+.rt-add-btn .material-symbols-outlined { font-size: 18px; }
+.rt-add-btn:hover {
+  background: linear-gradient(180deg, var(--glass-wash-3), var(--glass-wash-2));
+  border-color: rgb(var(--c-outline-variant) / 0.5);
+  box-shadow: var(--glass-inset), var(--shadow-pill);
+  color: rgb(var(--c-primary));
+}
+.rt-add-btn:active { transform: scale(0.97); }
+.rt-add-btn:focus-visible { outline: 2px solid rgb(var(--c-electric-indigo)); outline-offset: 1px; }
+@media (min-width: 640px) { .rt-add-btn { flex: 0 0 auto; } }
+@media (prefers-reduced-motion: reduce) {
+  .rt-add-btn { transition: none; }
+  .rt-add-btn:active { transform: none; }
+}
+
+/* ---- The three cards of the editor canvas ----
+   From lg the form is a row of three: "Thêm khối" (the four add-buttons) on the
+   LEFT, the writing panel in the middle, "Đăng bài" + "Thông tin thêm" on the
+   right. The add-buttons used to live INSIDE the writing panel, as a bare rail
+   beside the blocks; they are a card of their own now, glass-panel and heading
+   included, so the three read as one shelf of equal-standing panels rather than
+   as a page with a sidebar bolted on.
+   Below lg there is no room for three columns, so the form is flex-col and each
+   card takes the full width, add-buttons first - the tray there is the 2×2 grid
+   .rt-add-btn's flex-basis makes.
+   Both outer cards STICK. On a long post the header row scrolls off with the
+   first screen, and an author twenty paragraphs in would otherwise have to scroll
+   back to the top to add a picture - the one moment the block controls are wanted
+   is the moment they are furthest away. Sticky holds them at one place on screen
+   for the whole article, exactly like the docked formatting bar does for the
+   paragraph's own marks.
+   position:sticky needs an ancestor with no overflow of its own and a flex-start
+   alignment: #post-form is align-items:flex-start, so neither card is stretched to
+   the form's full height - a stretched sticky child has nothing left to stick
+   within.
+   Hand-written rather than utilities for the reason the whole <style> block gives:
+   tailwindcss cannot be rebuilt on this server, the lg:w-* steps a three-way split
+   needs are not among the classes public/css/tailwind.css already carries (it has
+   w-1/3, w-2/3, w-3/4 and w-64), and neither is any cap wider than the 80rem
+   max-w-7xl / max-w-screen-xl pair. */
+
+/* ---- How wide the page is, and how wide the writing surface inside it is ----
+   One cap for everything on this page - nav, breadcrumb row, canvas, footer, and
+   the dock - so the whole thing has a single pair of edges. It was max-w-7xl /
+   max-w-screen-xl, both 80rem, which with three cards left the writing surface
+   ~560px wide while the SAME text on the reading page gets 832px: post.html's
+   <main> is max-w-4xl (56rem) with md:px-margin-page (2rem) inside it, and
+   #post-body spans the rest. An author was therefore composing on a measure the
+   reader would never see - shorter lines, more of them, different rag.
+   96rem is not a round preference: it is the width at which the middle card's
+   content comes out at exactly that 832px, once the two outer cards (clamp()'ed
+   below), the two 24px gutters and the card's own p-md are paid for. */
+.rt-canvas { max-width: 96rem; }
+/* The belt to the canvas's braces: the section that holds the blocks is capped at
+   the reading page's own measure, so the text the author types can never run wider
+   than the text the reader gets. From lg up the column maths below lands on exactly
+   52rem, so here it binds with no slack and changes nothing - that is the invariant
+   being stated, not a rule doing work. Below lg it DOES do work: the three cards
+   stack, the middle one takes the whole canvas, and past ~945px of viewport (where
+   the stacked card's own content passes 52rem) this is the only thing stopping the
+   measure from running wider than the reading page's. It is also what keeps the two
+   in step if .rt-canvas is ever widened or an outer card narrowed without the
+   percentages below being retuned. */
+.rt-prose { max-width: 52rem; }
+
+.rt-rail,
+.rt-editor-col,
+.rt-side-col {
+  /* align-items:flex-start on the form means a column with no width of its own
+     shrinks to its content, so the stacked below-lg layout has to say 100%
+     explicitly - the job w-full did when these three were utility-classed. */
+  width: 100%;
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .rt-rail {
+    position: sticky;
+    /* 88px, the same offset the right-hand column uses: both stick under the
+       fixed 4rem nav with the same air, so the three cards read as one shelf
+       rather than as things pinned at unrelated heights. */
+    top: 88px;
+    /* clamp, not one fixed width per breakpoint. The floor is what the shelf
+       needs: 11.5rem, of which p-md's 1.5rem a side is the card's own padding,
+       leaves 8.5rem - the narrowest that still fits "+ TIÊU ĐỀ" on one line at
+       the 11px the pills are set in, so nothing truncates and nothing wraps to
+       two lines. The ceiling, 12.5rem, is the 9.5rem of shelf it had as a bare
+       rail. Between them it tracks the canvas, and THAT is why it is a clamp
+       rather than two steps: the middle column only takes what the outer two
+       leave, so a step up at 1280px used to make the writing surface NARROWER
+       across that one pixel - widening the window shrank the article. 13.6% of
+       the 96rem cap is 200.2px, so the column reaches its ceiling exactly where
+       the canvas stops growing, and never fights it. */
+    flex: 0 0 clamp(11.5rem, 13.6%, 12.5rem);
+    width: auto;
+  }
+  /* The tray turns vertical and the pills become rows: in a narrow card a wrapped
+     2×2 grid is two half-width pills nobody can read, and stacked they are a
+     menu - which is what a column of four actions is. nowrap because the tray is
+     a COLUMN here, where the wrap the 2×2 grid needs would put the pills in a
+     second column beside the first the moment anything constrained its height. */
+  .rt-rail .rt-add-group { flex-direction: column; flex-wrap: nowrap; width: 100%; }
+  .rt-rail .rt-add-btn {
+    flex: 0 0 auto;
+    width: 100%;
+    justify-content: flex-start;
+    min-height: 2.375rem;
+    /* The label is what has to give if a translation or a longer word ever
+       outgrows the shelf: clipped inside the pill rather than pushing the pill,
+       and therefore the whole writing column, wider. */
+    overflow: hidden;
+  }
+  /* The writing panel takes whatever the two outer cards leave, so it is the only
+     column that grows with the viewport. Basis 0, not auto: the panel's
+     min-content - one long unbreakable word, or a picture at its natural width -
+     would otherwise set the row's width instead of the available one and push the
+     right-hand card off the edge. */
+  .rt-editor-col { flex: 1 1 0; width: auto; }
+  /* The same clamp for the same reason - and this is the number the canvas maths
+     closes on. 21.5rem is what the middle card has to stop at for its content to
+     come out at .rt-prose's 52rem: 96rem of canvas, less 2rem of page padding a
+     side, less the rail's 12.5rem, less two 24px gutters, less 21.5rem here, is
+     55rem of card, and p-md's 1.5rem a side leaves exactly 52rem of writing
+     surface. The floor is 16.5rem because below that the cover preview and the
+     "Hủy / Lưu bài viết" pair stop being usable; 23.4% of the cap is 344.4px, so
+     it too reaches its ceiling exactly where the canvas does. */
+  .rt-side-col {
+    flex: 0 0 clamp(16.5rem, 23.4%, 21.5rem);
+    width: auto;
+    position: sticky;
+    top: 88px;
+  }
+}
+
+/* ---- The stand-in left at the caret while an image uploads ----
+   A pasted screenshot is several megabytes and the upload is a real wait, during
+   which the author is still typing. The chip marks the exact spot the picture
+   will land, so the caret can move on and the image still arrives where it was
+   asked for - js/write.js swaps this element for the <img> when the upload
+   resolves and removes it when the upload fails.
+   It is never saved: submitPostForm() waits on rtPendingUploads before the post is
+   serialised, and every path out of an upload ends with the chip replaced or
+   removed. What keeps it out of the author's own way meanwhile is the
+   contenteditable="false" write.js puts on it, not anything here - the styling
+   only has to say "this is a placeholder, not the article". */
+.rt-inline-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0.25rem 0.125rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px dashed rgb(var(--c-electric-indigo) / 0.5);
+  background: rgb(var(--c-electric-indigo) / 0.08);
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: rgb(var(--c-primary));
+  white-space: nowrap;
+  /* Sits on the text's own baseline rather than dropping below it: the chip is in
+     a line of the paragraph, and an inline-flex box defaults to baseline-aligning
+     on its last line's baseline, which reads as a pill hanging under the sentence.
+     Deliberately NOT user-select:none - inside a contenteditable that can leave an
+     element the caret cannot be placed next to, and therefore one Backspace cannot
+     remove. The contenteditable="false" write.js sets is what makes it atomic. */
+  vertical-align: middle;
+}
+.rt-inline-pending .material-symbols-outlined {
+  font-size: 15px;
+  animation: rt-pending-spin 1.1s linear infinite;
+}
+@keyframes rt-pending-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .rt-inline-pending .material-symbols-outlined { animation: none; }
+}
+
+/* ---- Hyperlink dialog ---- */
+/* Word's link dialog asks for two things - the address and the display text -
+   and this asks for the same two, because a link whose visible text is the raw
+   URL is what a paste produces, and an author writing one on purpose wants
+   better. Same material as the picker modal: the shared scrim over the page,
+   one raised card on top. Above the dock (80) and the menus (90); nothing else
+   on this page floats higher. */
+.rt-link {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--c-scrim);
+}
+/* This inline <style> loads AFTER tailwind.css, so the display rules written here
+   (flex on the overlay, inline-flex on .rt-upload) beat the .hidden utility in the
+   cascade - same specificity, later source order wins - and the dialog would
+   refuse to close. Re-assert the hidden state at higher specificity; it is the
+   dialog's whole behaviour, and the unlink button's when there is no link. */
+.rt-link.hidden,
+.rt-upload.hidden {
+  display: none;
+}
+/* The image-URL dialog's preview - the one thing in it that is neither a field nor
+   a button. Capped so a tall picture cannot make the card taller than the
+   viewport, and centred, because a preview hugging the left edge reads as a
+   thumbnail of something else rather than as "this is what you are about to
+   insert". display:block, which is why it needs the .hidden re-assertion below for
+   exactly the reason .rt-link and .rt-upload do. */
+.rt-image-url-preview {
+  display: block;
+  /* align-self rather than margin auto: .rt-link-card is a flex column, whose
+     default stretch would pull a replaced element to the full width of the card
+     and letterbox the picture inside it - object-fit keeps the ratio, but the box
+     it sits in would be twice as wide as the image. */
+  align-self: center;
+  max-width: 100%;
+  max-height: 12rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.5);
+  object-fit: contain;
+  background: rgb(var(--c-surface-container-lowest));
+}
+.rt-image-url-preview.hidden { display: none; }
+.rt-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 26rem;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid var(--glass-edge);
+  background: rgb(var(--c-surface-container-lowest));
+  box-shadow: var(--menu-shadow);
+}
+.rt-link-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--c-on-surface-variant));
+}
+.rt-link-error {
+  color: rgb(var(--c-error));
+  font-size: 0.8125rem;
+}
+.rt-link-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.rt-link-spacer { flex: 1 1 auto; }
+/* The one raised, filled control in the dialog - the commit - while Huỷ and
+   Gỡ liên kết stay the recessed .rt-upload material. */
+.rt-link-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  background: rgb(var(--c-electric-indigo));
+  color: rgb(var(--c-on-primary));
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.12s ease;
+}
+.rt-link-save:hover { background: rgb(var(--c-primary)); }
+.rt-link-save:active { transform: scale(0.97); }
+.rt-link-save:focus-visible { outline: 2px solid rgb(var(--c-electric-indigo)); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .rt-link-save { transition: none; }
+  .rt-link-save:active { transform: none; }
+}
+
+/* The empty-state panel. `bg-surface-container-lowest` was a FLAT fill on a page
+   made of glass - the one large surface here that did not sit in the same
+   material. Dashed border kept: it is what says "nothing here yet" rather than
+   "an empty pane". */
+.rt-empty-hint {
+  border-radius: 0.75rem;
+  border: 1px dashed rgb(var(--c-outline-variant) / 0.7);
+  background: linear-gradient(180deg, var(--glass-wash-1), var(--glass-wash-2));
+  box-shadow: inset 0 1px 2px rgb(var(--c-outline-variant) / 0.25);
+}
+/* Bare text in a flex container is wrapped in ONE anonymous flex item, sized like
+   any other. As a ROW the horizontal is that item's MAIN axis, so its width comes
+   from fit-content rather than from the tray and the copy is centered as a block
+   instead of wrapping to the tray's measure - which reads as unevenly stacked the
+   moment it runs past one line. As a COLUMN the horizontal is the cross axis,
+   whose default stretch gives the text the tray's full width, and justify-center
+   does the vertical centering in the 400px of empty tray. items-center is
+   deliberately absent: it would shrink the item straight back to fit-content. */
+
+/* ==========================================================================
+   The docked formatting bar
+   ONE toolbar for the page, pinned to the bottom of the viewport while the caret
+   is in a paragraph. It used to be rendered inside every text block, which put a
+   copy of all 25 controls in the DOM per block and pushed the writing surface
+   down the page - on a long post the formatting for the paragraph you were
+   already inside was somewhere above the fold.
+   Docked rather than floating next to the selection: paragraphs here run long,
+   and a bar that follows the selection sits ON the text being read, exactly
+   where the eye is. At the bottom edge it is never in the way, never scrolls
+   off, and the controls are in the same place for the first line of a block and
+   the fortieth.
+   ========================================================================== */
+.rt-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 80;
+  padding: 0.5rem;
+  /* This bar DOES blur its own backdrop: it is over page content, not inside
+     .glass-panel, so it is one of the two surfaces here (with .rt-menu) that has
+     nothing already blurred behind it. Three layers - two washes over a
+     surface-container-low tint - so the labels stay crisp against whatever
+     scrolls past underneath. */
+  background:
+    linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1)),
+    rgb(var(--c-surface-container-low) / 0.82);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  /* Border and shadow on the TOP edge only - the other three are off-screen.
+     --shadow-ambient-t is the site's own upward shadow, the one the footer uses. */
+  border-top: 1px solid var(--menu-border);
+  box-shadow: var(--shadow-ambient-t);
+  /* Slid away rather than display:none, so raising it reads as the bar arriving
+     from the edge instead of appearing on top of the text. The transform is what
+     is animated (compositor-only); visibility rides along so a hidden bar is not
+     a click target, and its transition is stepped to the END of the slide-out
+     and the START of the slide-in. */
+  transform: translateY(100%);
+  visibility: hidden;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.22s;
+}
+.rt-dock.is-open {
+  transform: none;
+  visibility: visible;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+}
+/* The bar belongs to the text, not to the window, so it is capped and centred
+   exactly like .rt-canvas - one cap for the page, the dock included, or on a wide
+   screen the controls would run out past the cards they act on. The padding is the
+   canvas's own page padding (px-sm, then md:px-margin-page) rather than the 0.25rem
+   it had, so the first and last control sit on the same vertical as the outer
+   edges of the three cards. */
+.rt-dock-inner {
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+@media (min-width: 768px) { .rt-dock-inner { padding: 0 2rem; } }
+/* The page can be scrolled clear of the bar while it is up. A fixed bar
+   otherwise covers the end of the post - which is exactly where the author is
+   typing when they reach it. */
+body.rt-dock-open { padding-bottom: 4.5rem; }
+/* Inside the dock the toolbar is no longer a recessed tray in a block - the dock
+   itself is the surface - so it drops its own wash, border and inset. */
+.rt-dock .rt-toolbar {
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  justify-content: center;
+}
+
+/* Below lg the 28 controls go up to 44px each (see .rt-btn in the touch-target
+   block above), which is ~1100px of buttons: wrapped, that is three rows and a
+   third of a phone screen gone. So on a phone the bar is ONE row that scrolls
+   sideways instead - the pattern every mobile editor uses - and the row keeps a
+   fixed height so the page padding below can match it.
+   overscroll-behavior-x: contain stops a swipe that runs off the end of the
+   toolbar from turning into a browser back-navigation, which on this page would
+   throw away an unsaved post. */
+@media (max-width: 1023px) {
+  body.rt-dock-open { padding-bottom: 4.75rem; }
+  .rt-dock .rt-toolbar {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding-bottom: 0.125rem;
+  }
+  .rt-dock .rt-toolbar::-webkit-scrollbar { display: none; }
+  /* A separator in a scrolling row cannot stretch to a height it no longer has. */
+  .rt-dock .rt-sep { align-self: center; height: 1.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-dock { transition: none; }
+  .rt-dock.is-open { transition: none; }
+}
+
+/* ==========================================================================
+   The image panel - sizing a picture that sits INSIDE a paragraph
+   A click on an <img class="rt-inline-img"> raises it: a rim around the picture,
+   one button in the middle of it, a handle on its right edge, and the exact
+   steps underneath. The middle button is the one an author reaches for - it takes
+   the picture to the full width of the article, and it is a TOGGLE, because at
+   100% the only move left is back to the picture's own size.
+   What is written is one class out of the .rt-img-* set in css/common.css and
+   nothing else: no style attribute (server/sanitize-html.js's STYLE_PROPS has no
+   `width`, so an inline one would be stripped on save) and no width attribute (a
+   pixel count would not follow the measure). Only a width is ever set, and
+   `height: auto` in that same file is what holds the ratio.
+   Parented to <body> and position:fixed for the reasons .rt-menu gives above, and
+   one of its own: syncEditorToBlock() stores editor.innerHTML, so anything drawn
+   INSIDE the contenteditable to decorate the picture would be saved into the post
+   and then stripped by the sanitizer - a rim and a button that appear in the
+   article and vanish on the reading page. Outside the editor, the decoration is
+   never part of the document.
+   The panel is sized to the picture's own box, so the rim IS the panel rather
+   than a second element to keep in step with it. pointer-events:none on the panel
+   and auto again on the three controls: the picture underneath stays clickable and
+   the caret can still be placed in the text either side of it.
+   ========================================================================== */
+.rt-img-panel {
+  position: fixed;
+  z-index: 85;
+  /* 2px clear of the picture's own edge, and rounded to the 0.75rem
+     .rt-inline-img carries, so the rim reads as drawn around the picture rather
+     than as a box it happens to be sitting in. Outline, not border: a border
+     would be inside the box this panel is sized to and would cover the picture's
+     own first pixel. */
+  outline: 2px solid rgb(var(--c-electric-indigo) / 0.85);
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+  pointer-events: none;
+}
+.rt-img-panel[hidden] { display: none; }
+.rt-img-panel.is-dragging { outline-color: rgb(var(--c-primary)); }
+
+/* The button in the middle. Two arrows pointing away from each other, because
+   that is the gesture - and drawn as an inline SVG painted through a mask rather
+   than taken from the icon font. The font here is a SUBSET of 92 ligatures
+   (scripts/icon-names.py lists them, `npm run fetch:fonts` rebuilds it) and no
+   expand glyph is among them; an unlisted name renders as nothing at all, and the
+   subset cannot be rebuilt from this mount. Same mask-painted-with-currentColor
+   trick as .rt-select::after, so the arrow follows the button's own colour and
+   both themes for free. */
+.rt-img-zoom {
+  --expand-arrows: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.2 9.8 13 3M13 3H8.8M13 3v4.2'/%3E%3Cpath d='M9.8 6.2 3 13M3 13h4.2M3 13V8.8'/%3E%3C/svg%3E");
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border-radius: 9999px;
+  border: 1px solid var(--menu-border);
+  /* Its own blur, like the dock and .rt-menu: it floats over a picture, which is
+     the one thing behind it that has not already been blurred by a .glass-panel.
+     The wash is nearly opaque so the label stays readable on a light screenshot
+     and on a dark one alike. */
+  background:
+    linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1)),
+    rgb(var(--c-surface-container-low) / 0.9);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  box-shadow: var(--shadow-pill);
+  font-family: var(--font-vi-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  pointer-events: auto;
+  transition: border-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+.rt-img-zoom::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: var(--expand-arrows) no-repeat center / 14px 14px;
+          mask: var(--expand-arrows) no-repeat center / 14px 14px;
+}
+.rt-img-zoom:hover { border-color: rgb(var(--c-electric-indigo) / 0.55); color: rgb(var(--c-primary)); }
+/* translate() is already on it for the centering, so :active has to carry it
+   again - a bare scale() here would snap the button to the panel's top-left. */
+.rt-img-zoom:active { transform: translate(-50%, -50%) scale(0.96); }
+.rt-img-zoom:focus-visible { outline: 2px solid rgb(var(--c-electric-indigo)); outline-offset: 2px; }
+
+/* The handle on the right edge. A grip rather than an edge, so there is something
+   to see as well as something to grab. 22px wide because the visible bar is 4px
+   and a drag target that thin is one nobody hits; straddling the edge (right:
+   -11px) puts the visible half over the picture and the other half over whatever
+   is beside it, so neither the rim nor the paragraph is what gets grabbed.
+   touch-action:none is what stops a phone from scrolling the page instead of
+   resizing the picture - the pointermove handler cannot cancel a scroll the
+   compositor has already taken over. */
+.rt-img-handle {
+  position: absolute;
+  top: 0;
+  right: -11px;
+  width: 22px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ew-resize;
+  touch-action: none;
+  pointer-events: auto;
+}
+.rt-img-handle::after {
+  content: '';
+  width: 4px;
+  height: 2.5rem;
+  /* A short picture - a 60px-tall emoji sized down to 25% - still has to have a
+     handle that fits inside it. */
+  max-height: 70%;
+  border-radius: 9999px;
+  background: rgb(var(--c-electric-indigo));
+  box-shadow: var(--shadow-pill);
+  transition: background 0.16s ease;
+}
+.rt-img-handle:hover::after,
+.rt-img-handle:focus-visible::after { background: rgb(var(--c-primary)); }
+/* The grip IS the focus ring: an outline on a 4px-wide bar is an outline around
+   nearly nothing, and what the author focused is the picture's edge. So focus
+   does what hover does and takes the grip to --c-primary, against the rim's
+   lighter indigo. Not :has() on the panel to recolour the rim as well - the site
+   still supports Safari 15 (see the inert note on .rt-dock), which does not have
+   it, and a ring that appears in every browser beats a nicer one in most. */
+.rt-img-handle:focus-visible { outline: none; }
+
+/* The exact steps, for an author who wants 50% rather than "about half". Under
+   the picture and centred on it, flipped above when the dock is in the way -
+   placeRtImgPanel() makes the same test placeRtMenu() does. */
+.rt-img-bar {
+  position: absolute;
+  top: calc(100% + 0.625rem);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--menu-border);
+  background:
+    linear-gradient(180deg, var(--glass-wash-2), var(--glass-wash-1)),
+    rgb(var(--c-surface-container-low) / 0.92);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow: var(--shadow-ambient);
+  white-space: nowrap;
+  pointer-events: auto;
+}
+.rt-img-bar.above { top: auto; bottom: calc(100% + 0.625rem); }
+/* Same pill as .rt-btn, at the size the menu's own options use: these are the
+   third row of controls on this page and the three rows are one material. */
+.rt-img-size {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  height: 1.75rem;
+  padding: 0 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: var(--font-vi-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgb(var(--c-on-surface-variant));
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.rt-img-size:hover {
+  background: linear-gradient(180deg, var(--glass-wash-3), var(--glass-wash-2));
+  color: rgb(var(--c-primary));
+}
+.rt-img-size[aria-pressed='true'] {
+  background: linear-gradient(180deg, rgb(var(--c-electric-indigo) / 0.2), rgb(var(--c-electric-indigo) / 0.12));
+  border-color: rgb(var(--c-electric-indigo) / 0.42);
+  color: rgb(var(--c-primary));
+}
+.rt-img-size:focus-visible { outline: 2px solid rgb(var(--c-electric-indigo)); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) {
+  .rt-img-zoom, .rt-img-size, .rt-img-handle::after { transition: none; }
+  .rt-img-zoom:active { transform: translate(-50%, -50%); }
+}
+
+/* ---- "Bố cục ảnh" block (write.js layoutBlockEditorHtml()) ----
+   One slot per picture: thumbnail, upload/library/remove, URL and the required
+   alt text. Slots sit side by side for the multi-picture layouts. */
+.rt-lay-slots {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .rt-lay-slots--multi { grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
+}
+.rt-lay-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.5);
+}
+.rt-lay-thumb {
+  width: 100%;
+  height: 9rem;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+.rt-lay-thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px dashed rgb(var(--c-outline-variant));
+  color: rgb(var(--c-on-surface-variant));
+  font-size: 13px;
+}
+.rt-lay-slot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+.rt-field.is-invalid {
+  border-color: rgb(var(--c-error));
+  box-shadow: 0 0 0 3px rgb(var(--c-error) / 0.15);
+}
+.rt-lay-preview {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px dashed rgb(var(--c-outline-variant) / 0.8);
+}
+.rt-lay-preview .prose-content { font-size: 0.9rem; }
+.rt-lay-preview .ilay { margin: 0.5rem 0 0; }
+.rt-lay-preview img { cursor: default; }
+.rt-lay-placeholder { color: rgb(var(--c-on-surface-variant)); font-style: italic; }

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-name="">AnonyHT</title>
+<!-- Site-level SEO/social tags. data-meta-content fills `content` from the
+     settings table (server/render-html.js) the same way data-setting-src
+     fills an <img src> above. meta_description is its own setting: a
+     search snippet wants a full
+     sentence or two describing the whole site, the exact thing Google was
+     showing an actual ARTICLE excerpt instead of before this field existed -
+     a bare page title with nothing substantial in the meta description is
+     exactly what pushes Google to pick its own text from the page body
+     instead. Admin > Quản lí trang chủ > "Mô tả SEO (Google)". A per-POST
+     page overrides all of this with its own title/description/image - see
+     fillPostMeta() in render-html.js. -->
+<meta name="description" data-meta-content="meta_description" data-fallback="TuanPA - blog cá nhân, nơi chia sẻ ảnh đời thường và vài dòng suy nghĩ.">
+<meta property="og:type" content="website">
+<!-- data-meta-content only ever fills the `content` attribute (see its own
+     comment in render-html.js) - data-brand-name a few lines up fills TEXT
+     content instead, which a void <meta> element has none of, so brand_name
+     (the same settings key data-brand-name reads) is named directly here. -->
+<meta property="og:site_name" data-meta-content="brand_name" data-fallback="TuanPA">
+<meta property="og:title" data-meta-content="brand_name" data-fallback="TuanPA">
+<meta property="og:description" data-meta-content="meta_description" data-fallback="TuanPA - blog cá nhân, nơi chia sẻ ảnh đời thường và vài dòng suy nghĩ.">
+<meta property="og:url" content="https://blog.tuanpa.tech/">
+<link rel="canonical" href="https://blog.tuanpa.tech/">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#f6f1e7" data-theme-color-dark="#1e1a16">
+<!-- Favicon do admin đặt (Bảng quản trị > Quản lí trang chủ). server/render-html.js
+     điền href từ bảng settings trước khi gửi; giá trị trống hoặc chưa đặt thì bỏ cả thẻ. -->
+<link rel="icon" data-setting-href="favicon">
+<!-- Theme switch. MUST stay here - blocking, in <head>, ahead of the
+     stylesheets - so <html class="dark"> is set before the first paint.
+     Deferring it (or folding it into api.js at the end of <body>) brings back
+     the white flash on every navigation. -->
+<script src="/js/theme.js"></script>
+
+<!-- Fonts. Both families are SELF-HOSTED in /css/fonts.css, which
+     scripts/fetch-fonts.py generates: Inter as the static faces
+     Google serves per unicode-range (latin / latin-ext / vietnamese - the
+     three a page of Vietnamese prose actually selects), Material Symbols as a
+     subset of just the icons in use. Same-origin is the point: the first paint
+     waits on no third party, the faces are discovered while this
+     render-blocking stylesheet parses, and the hashed filenames are what lets
+     server.js serve /fonts/ as immutable for a year.
+     The two font-display values differ because the families fail differently.
+     An icon is a LIGATURE - the markup contains the word "search" and the font
+     turns it into a glyph - so block hides nothing-yet instead of printing the
+     word while the subset arrives. Body text swaps, because its fallback stack
+     is already readable text at the right size.
+     The faces the first paint sets text in are preloaded between the
+     @generated markers below; fetch-fonts.py rewrites their hashed hrefs. -->
+<link href="/css/fonts.css" rel="stylesheet">
+<!-- @font-face alone does not start a download until the layout needs a glyph,
+     which on the icon font means icons stay invisible for an extra round-trip
+     (display:block draws nothing), so the faces the first screen needs are
+     preloaded: the icon subset, plus the body family's 400 in the two
+     unicode-ranges Vietnamese prose is actually set in - latin and vietnamese,
+     which is why two, and why not the 700: body text is the first paint,
+     headings at worst the one after. `crossorigin` is required even
+     same-origin - fonts are always fetched anonymously, and a preload that
+     does not match the mode is simply downloaded twice.
+     The hrefs are hashed and therefore GENERATED - `npm run fetch:fonts`
+     rewrites everything between the markers below. Do not edit them by hand. -->
+<!-- @generated:font-preload -->
+<link as="font" crossorigin href="/fonts/material-symbols-subset.c7d51076.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-latin.3100e775.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-vietnamese.5c66f9e0.woff2" rel="preload" type="font/woff2">
+<!-- /@generated:font-preload -->
+
+<!-- Editorial redesign (shared with post.html - see public/css/editorial.css).
+     Newsreader is the headline display serif; preloaded here for the same reason
+     as the two Inter faces above: the hero title is set in it and is
+     close to the first paint. Not @generated - hand-maintained, this file is not
+     part of the shared fetch-fonts.py pipeline. -->
+<link as="font" crossorigin href="/fonts/newsreader-n-400-latin.62981321.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/newsreader-n-400-vietnamese.f0dcc979.woff2" rel="preload" type="font/woff2">
+
+<!-- Design tokens, then the utilities. tailwind.css is COMPILED (see
+     tailwind.config.js + `npm run build:css`), replacing
+     <script src="https://cdn.tailwindcss.com">, which was not a stylesheet at
+     all but a 451 KB compiler: it parsed the DOM and only then generated and
+     appended a <style>. Until that finished not one utility existed - including
+     `.hidden`, which common.css does not define - so every element the markup
+     had hidden was painted and the page was a bare stack of unstyled text.
+     That is the other half of the flash.
+     Load order is deliberate: the CDN appended its <style> at the END of
+     <head>, after common.css, so keeping tailwind.css last preserves exactly
+     the cascade the pages were built against. -->
+<link href="/css/common.css" rel="stylesheet">
+<link href="/css/tailwind.css" rel="stylesheet">
+<!-- Editorial redesign (shared with post.html) - see the file's own header
+     comment for scope and rationale. -->
+<link href="/css/editorial.css" rel="stylesheet">
+</head>
+<body class="editorial-page font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col">
+
+<!-- TopNavBar -->
+<nav class="ed-nav fixed top-0 w-full z-50">
+<div class="flex justify-between items-center h-16 px-sm md:px-margin-page w-full max-w-7xl mx-auto gap-6">
+<div class="flex items-center gap-6">
+<button class="ed-icon-btn ed-hamburger-btn flex items-center justify-center p-1.5" type="button" data-action="mobile-nav-toggle" aria-label="Mở menu điều hướng"><span class="material-symbols-outlined">menu</span></button>
+<!-- data-brand-name sits on the INNER span, not this <a>: applySiteBranding()
+     in js/api.js does el.textContent = ... on every [data-brand-name] element,
+     which would otherwise wipe out the accent dot sibling (and the wordmark's
+     own span, along with its serif styling) the moment settings load. -->
+<a class="group inline-flex items-baseline gap-1.5" href="/index.html" id="nav-brand">
+<span class="ed-wordmark" data-brand-name>TuanPA</span>
+</a>
+<!-- Section links, same four the footer's "Mục lục xuất bản" repeats. Each
+     page hardcodes its own .is-active - one static file per page, no router
+     to ask "which page is this" at runtime. -->
+<div class="ed-nav-links">
+<a class="ed-nav-link is-active" href="/index.html">Trang chủ</a>
+<a class="ed-nav-link" href="/viewall.html">Tất cả bài viết</a>
+<a class="ed-nav-link" href="/about.html">Về tác giả</a>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<div class="relative hidden sm:block" id="header-search-wrap">
+<span class="material-symbols-outlined ed-icon-faint absolute left-3 top-1/2 -translate-y-1/2 text-[16px] pointer-events-none">search</span>
+<input id="search-input" type="text" placeholder="Tìm kiếm bài viết..." aria-label="Tìm kiếm bài viết" class="ed-search pl-8 pr-1 py-1.5 font-body-sm text-body-sm w-40 lg:w-56">
+</div>
+<button class="ed-icon-btn sm:hidden flex items-center justify-center p-2" id="header-search-toggle" title="Tìm kiếm" data-action="search-toggle"><span class="material-symbols-outlined">search</span></button>
+<div class="ed-nav-divider hidden sm:block" aria-hidden="true"></div>
+<!-- No theme button here any more: Sáng / Tối / Tự động is picked from the
+     "Giao diện" row at the top of the account dropdown (js/api.js
+     themePickerHtml()), on every page and at every width. -->
+<!-- No sm: responsive hiding here (unlike the divider/theme button beside it):
+     data-writer-only already toggles the ONE class that decides whether this
+     shows at all (js/api.js), and combining that with a bare `hidden` plus a
+     breakpoint-scoped display utility would leave a writer on a phone seeing
+     it as unstyled inline text below sm once JS removes `hidden`, instead of
+     staying gone. -->
+<a data-writer-only href="/write.html" aria-label="Viết bài" class="ed-btn-primary ed-nav-write inline-flex text-[12px]">
+<span class="material-symbols-outlined">edit_note</span>Viết bài
+</a>
+<div class="relative">
+<button id="nav-avatar-btn" class="ed-avatar-btn overflow-hidden flex items-center justify-center active:scale-95 transition-transform" title="Tài khoản" data-action="nav-dropdown">
+<img alt="Ảnh đại diện" class="w-full h-full object-cover hidden" id="nav-avatar-img">
+<span class="material-symbols-outlined ed-icon-soft text-[18px]" id="nav-avatar-placeholder">person</span>
+</button>
+<div class="ed-dropdown-panel absolute right-0 mt-2 w-56 z-50 hidden origin-top-right" id="user-dropdown-menu"></div>
+</div>
+</div>
+</div>
+</nav>
+
+<!-- Search Overlay -->
+<div class="ed-search-overlay hidden sm:hidden fixed top-16 left-0 w-full z-40" id="search-overlay">
+<div class="max-w-7xl mx-auto px-sm md:px-margin-page py-4 flex items-center gap-4">
+<span class="material-symbols-outlined ed-icon-faint">search</span>
+<input class="ed-search flex-grow min-w-0 border-none py-1 font-body-lg text-body-lg" id="search-input-mobile" placeholder="Tìm kiếm bài viết..." type="text">
+<button class="ed-icon-btn shrink-0 w-11 h-11 flex items-center justify-center" aria-label="Đóng tìm kiếm" data-action="search-close"><span class="material-symbols-outlined">close</span></button>
+</div>
+</div>
+
+<main id="home-main" class="flex-grow pt-24 md:pt-28 pb-lg px-sm md:px-margin-page w-full max-w-7xl mx-auto flex flex-col gap-md md:gap-lg">
+
+<!-- Latest Posts: the newest article IS the masthead, exactly like the
+     reference mockup - no separate admin-configurable hero block above it.
+     (An earlier version of this page had one - a title/dek/image set from
+     Admin > Quản lí trang chủ, unrelated to any actual post - but the
+     reference never has a masthead independent of the lead story, and having
+     both read as two different "front page"s stacked on each other.) -->
+<!-- No reveal-on-scroll here: this section is above the fold and already
+     server-rendered (render-html.js fillLeadCard()). The reveal kept it at
+     opacity 0 until home.js had fetched two lists and run a 0.7s fade, and a
+     transparent element is not an LCP candidate. The fade stays on
+     #more-section below, which starts off-screen. -->
+<section id="latest-section" class="scroll-mt-24">
+<p class="ed-icon-soft" id="latest-loading">Đang tải bài viết...</p>
+<p class="hidden text-error" id="latest-error"></p>
+
+<div class="hidden ed-grid" id="latest-grid">
+
+<!-- Main article: photo above, caption below - not white type stacked over the
+     photo behind a darkening gradient. h1, not h3: with the hero gone this is
+     the page's one actual headline. -->
+<article id="latest-main" class="group cursor-pointer flex flex-col gap-md">
+<div class="ed-lead-media w-full">
+<img alt="Ảnh bài viết mới nhất" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" id="latest-image" fetchpriority="high" decoding="async">
+</div>
+<div class="flex flex-col gap-3">
+<span class="ed-chip" id="latest-tag"></span>
+<h1 class="ed-hero-title" id="latest-title"></h1>
+<p class="ed-dek line-clamp-3" id="latest-excerpt"></p>
+<!-- Boxed meta bar, matching the reference's lead byline panel (and this
+     site's own post.html header) - not a bare row of text floating on the
+     page. -->
+<div class="ed-byline ed-byline-strip mt-2">
+<img class="ed-byline-avatar" id="latest-author-avatar" alt="">
+<span id="latest-author-name"></span>
+<span class="ed-byline-dot">·</span>
+<span id="latest-date"></span>
+</div>
+</div>
+</article>
+
+<!-- "Đọc nhiều nhất" rail: real data, GET /api/posts?sort=views (server/routes/posts.js).
+     Not the reference mockup's fake reader-count widget - an actual ranking by
+     the site's own view counter, same field the article page's own view count
+     comes from. Numbered 01/02/03... (home.js), matching the reference
+     docket's own rank markers. Boxed in .ed-panel like the reference's own
+     "Editorial Companion Rail" card - previously a bare, unbordered column. -->
+<div id="most-read-block" class="ed-panel p-5 sm:p-6">
+<span class="ed-kicker">Đọc nhiều nhất</span>
+<div class="ed-story-list mt-3" id="latest-secondary"></div>
+</div>
+</div>
+
+<div id="posts-empty" class="ed-empty hidden text-center py-12">Chưa có bài viết nào.</div>
+</section>
+
+
+<!-- More posts: a plain mosaic grid below the lead + most-read rail, filled by
+     home.js from the same newest-first list the lead came from (skipping
+     whichever posts already appear above so nothing repeats). Hidden entirely
+     when there is nothing left to show past the lead/rail. Carries the
+     "Bài viết mới nhất" heading + "Xem tất cả" - the reference mockup's own
+     Primary Feed Section heading sits over this mosaic grid, not over the
+     lead above. -->
+<section id="more-section" class="hidden reveal-on-scroll space-y-md scroll-mt-24">
+<div class="ed-section-head flex justify-between items-end gap-4 flex-wrap pb-sm">
+<h2 class="ed-section-title">Bài viết mới nhất</h2>
+<a class="ed-link-arrow" href="/viewall.html">Xem tất cả</a>
+</div>
+<div class="ed-masonry" id="more-grid"></div>
+</section>
+</main>
+
+<!-- Footer -->
+<!-- Just the copyright line now - Liên hệ/Điều khoản moved up into the nav
+     (see the 5 links in .ed-nav above), so a footer that only ever held those
+     two links plus this line does not need to exist as anything more. -->
+<footer class="ed-footer w-full py-3 mt-auto">
+<div class="text-center px-sm md:px-margin-page max-w-7xl mx-auto font-body-sm text-body-sm">© <span id="footer-year"></span> <span data-footer-text data-fallback="TuanPA.">TuanPA.</span></div>
+</footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/home.js"></script>
+</body>
+</html>

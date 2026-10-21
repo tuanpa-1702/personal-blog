@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-name="Trang cá nhân">Trang cá nhân - AnonyHT</title>
+<meta name="theme-color" content="#f6f1e7" data-theme-color-dark="#1e1a16">
+<!-- Favicon do admin đặt (Bảng quản trị > Quản lí trang chủ). server/render-html.js
+     điền href từ bảng settings trước khi gửi; giá trị trống hoặc chưa đặt thì bỏ cả thẻ. -->
+<link rel="icon" data-setting-href="favicon">
+<!-- Theme switch. MUST stay here - blocking, in <head>, ahead of the
+     stylesheets - so <html class="dark"> is set before the first paint.
+     Deferring it (or folding it into api.js at the end of <body>) brings back
+     the white flash on every navigation. -->
+<script src="/js/theme.js"></script>
+
+<!-- Fonts. Both families are SELF-HOSTED in /css/fonts.css, which
+     scripts/fetch-fonts.py generates: Inter as the static faces
+     Google serves per unicode-range (latin / latin-ext / vietnamese - the
+     three a page of Vietnamese prose actually selects), Material Symbols as a
+     subset of just the icons in use. Same-origin is the point: the first paint
+     waits on no third party, the faces are discovered while this
+     render-blocking stylesheet parses, and the hashed filenames are what lets
+     server.js serve /fonts/ as immutable for a year.
+     The two font-display values differ because the families fail differently.
+     An icon is a LIGATURE - the markup contains the word "search" and the font
+     turns it into a glyph - so block hides nothing-yet instead of printing the
+     word while the subset arrives. Body text swaps, because its fallback stack
+     is already readable text at the right size.
+     The faces the first paint sets text in are preloaded between the
+     @generated markers below; fetch-fonts.py rewrites their hashed hrefs. -->
+<link href="/css/fonts.css" rel="stylesheet">
+<!-- @font-face alone does not start a download until the layout needs a glyph,
+     which on the icon font means icons stay invisible for an extra round-trip
+     (display:block draws nothing), so the faces the first screen needs are
+     preloaded: the icon subset, plus the body family's 400 in the two
+     unicode-ranges Vietnamese prose is actually set in - latin and vietnamese,
+     which is why two, and why not the 700: body text is the first paint,
+     headings at worst the one after. `crossorigin` is required even
+     same-origin - fonts are always fetched anonymously, and a preload that
+     does not match the mode is simply downloaded twice.
+     The hrefs are hashed and therefore GENERATED - `npm run fetch:fonts`
+     rewrites everything between the markers below. Do not edit them by hand. -->
+<!-- @generated:font-preload -->
+<link as="font" crossorigin href="/fonts/material-symbols-subset.c7d51076.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-latin.3100e775.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/inter-n-400-vietnamese.5c66f9e0.woff2" rel="preload" type="font/woff2">
+<!-- /@generated:font-preload -->
+
+<!-- Editorial redesign (shared with index.html/post.html/viewall.html) - see
+     css/editorial.css. Newsreader is the headline display serif; preloaded
+     here for the same reason as the two Inter faces above. Not
+     @generated - hand-maintained, not part of the shared fetch-fonts.py
+     pipeline. -->
+<link as="font" crossorigin href="/fonts/newsreader-n-400-latin.62981321.woff2" rel="preload" type="font/woff2">
+<link as="font" crossorigin href="/fonts/newsreader-n-400-vietnamese.f0dcc979.woff2" rel="preload" type="font/woff2">
+
+<!-- Design tokens, then the utilities. tailwind.css is COMPILED (see
+     tailwind.config.js + `npm run build:css`), replacing
+     <script src="https://cdn.tailwindcss.com">, which was not a stylesheet at
+     all but a 451 KB compiler: it parsed the DOM and only then generated and
+     appended a <style>. Until that finished not one utility existed - including
+     `.hidden`, which common.css does not define - so every element the markup
+     had hidden was painted and the page was a bare stack of unstyled text.
+     That is the other half of the flash.
+     Load order is deliberate: the CDN appended its <style> at the END of
+     <head>, after common.css, so keeping tailwind.css last preserves exactly
+     the cascade the pages were built against. -->
+<link href="/css/common.css" rel="stylesheet">
+<link href="/css/tailwind.css" rel="stylesheet">
+<!-- The inline body{background;min-height} rule that used to sit here is
+     redundant now: .editorial-page (below) already sets that background, and
+     min-h-screen on <body> already covers the height. -->
+<link href="/css/editorial.css" rel="stylesheet">
+</head>
+<body class="editorial-page font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col pt-16">
+
+<!-- TopNavBar -->
+<nav class="ed-nav fixed top-0 w-full z-50">
+<div class="flex justify-between items-center h-16 px-sm md:px-margin-page w-full max-w-7xl mx-auto gap-6">
+<div class="flex items-center gap-6">
+<button class="ed-icon-btn ed-hamburger-btn flex items-center justify-center p-1.5" type="button" data-action="mobile-nav-toggle" aria-label="Mở menu điều hướng"><span class="material-symbols-outlined">menu</span></button>
+<a class="group inline-flex items-baseline gap-1.5" href="/index.html" id="nav-brand">
+<span class="ed-wordmark" data-brand-name>TuanPA</span>
+</a>
+<div class="ed-nav-links">
+<a class="ed-nav-link" href="/index.html">Trang chủ</a>
+<a class="ed-nav-link" href="/viewall.html">Tất cả bài viết</a>
+<a class="ed-nav-link" href="/about.html">Về tác giả</a>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<div class="relative hidden sm:block" id="header-search-wrap">
+<span class="material-symbols-outlined ed-icon-faint absolute left-3 top-1/2 -translate-y-1/2 text-[16px] pointer-events-none">search</span>
+<input id="search-input" type="text" placeholder="Tìm kiếm bài viết..." aria-label="Tìm kiếm bài viết" class="ed-search pl-8 pr-1 py-1.5 font-body-sm text-body-sm w-40 lg:w-56">
+</div>
+<button class="ed-icon-btn sm:hidden flex items-center justify-center p-2" id="header-search-toggle" title="Tìm kiếm" data-action="search-toggle"><span class="material-symbols-outlined">search</span></button>
+<div class="ed-nav-divider hidden sm:block" aria-hidden="true"></div>
+<a data-writer-only href="/write.html" aria-label="Viết bài" class="ed-btn-primary ed-nav-write inline-flex text-[12px]">
+<span class="material-symbols-outlined">edit_note</span>Viết bài
+</a>
+<div class="relative">
+<!-- The dropdown is live on this page (unlike most others, it is not just
+     "your account" here - see renderNavAuthState() in api.js): it also
+     carries this page's own panel switches (Chỉnh sửa hồ sơ, Đổi mật khẩu,
+     Thông báo, Hoạt động gần đây), which is what lets the side rail below
+     hide on narrow viewports instead of eating the whole first screen. -->
+<button id="nav-avatar-btn" class="ed-avatar-btn overflow-hidden flex items-center justify-center active:scale-95 transition-transform" title="Tài khoản" data-action="nav-dropdown">
+<img alt="Ảnh đại diện" class="w-full h-full object-cover hidden" id="nav-avatar-img">
+<span class="material-symbols-outlined ed-icon-soft text-[18px]" id="nav-avatar-placeholder">person</span>
+</button>
+<div class="ed-dropdown-panel absolute right-0 mt-2 w-56 z-50 hidden origin-top-right" id="user-dropdown-menu"></div>
+</div>
+</div>
+</div>
+</nav>
+
+<!-- Search Overlay -->
+<div class="ed-search-overlay hidden sm:hidden fixed top-16 left-0 w-full z-40" id="search-overlay">
+<div class="max-w-7xl mx-auto px-sm md:px-margin-page py-4 flex items-center gap-4">
+<span class="material-symbols-outlined ed-icon-faint">search</span>
+<input class="ed-search flex-grow min-w-0 border-none py-1 font-body-lg text-body-lg" id="search-input-mobile" placeholder="Tìm kiếm bài viết..." type="text">
+<button class="ed-icon-btn shrink-0 w-11 h-11 flex items-center justify-center" aria-label="Đóng tìm kiếm" data-action="search-close"><span class="material-symbols-outlined">close</span></button>
+</div>
+</div>
+
+<div id="not-logged-in" class="hidden flex-grow flex-col items-center justify-center gap-4 pb-xl">
+<p class="ed-icon-soft">Bạn cần đăng nhập để xem trang cá nhân.</p>
+<button class="ed-btn-primary" data-action="auth-open">Đăng nhập</button>
+</div>
+
+<main id="profile-main" class="hidden flex-grow max-w-7xl mx-auto w-full px-sm md:px-gutter pt-6 pb-xl flex flex-col lg:flex-row items-start gap-gutter">
+
+<!-- Sidebar Navigation. Same flex row as admin.html's main, so the rail can take
+     the one shared box rule - .side-rail-aside in common.css, which is where the
+     sticky offset, the clamp()ed width and the height cap live for BOTH pages.
+     items-start matters: a stretched flex child is as tall as the row it sits
+     in, and a sticky box with no room to move inside its container never sticks.
+     The .side-rail rules in common.css stack this card's rows vertically at
+     every width; below lg the aside is full width, so they sit above the content
+     instead of beside it. -->
+<aside class="side-rail-aside flex flex-col min-w-0">
+<div class="side-rail rounded p-2 lg:p-4 gap-base">
+<!-- Site links -->
+<a class="side-nav-item flex items-center gap-3 px-4 py-3 transition-all font-label-md text-label-md" href="/index.html">
+<span class="material-symbols-outlined">home</span>Trang chủ
+</a>
+<a data-writer-only class="side-nav-item hidden flex items-center gap-3 px-4 py-3 transition-all font-label-md text-label-md" href="/write.html">
+<span class="material-symbols-outlined">edit_note</span>Viết bài mới
+</a>
+<a data-admin-link class="side-nav-item hidden flex items-center gap-3 px-4 py-3 transition-all font-label-md text-label-md" href="/admin.html">
+<span class="material-symbols-outlined">dashboard</span>Bảng quản trị
+</a>
+<hr class="my-1" style="border-color: rgb(var(--ed-divider))">
+<!-- Panel switchers for this page. -->
+<button type="button" data-panel-target="panel-posts" class="side-nav-item active w-full text-left flex items-center gap-3 px-4 py-3 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">person</span>Trang cá nhân
+</button>
+<!-- "Chỉnh sửa hồ sơ" no longer starts here - see profile-edit-btn on the
+     cover banner above, right under its camera icon. Still the exact same
+     panel-edit target, so the header dropdown's own "Chỉnh sửa hồ sơ" entry
+     (js/api.js renderNavAuthState()) and the #avatar hash both still reach
+     it unchanged. -->
+<div id="profile-owner-actions" class="side-rail-group flex flex-col gap-base">
+<button type="button" data-panel-target="panel-password" class="side-nav-item w-full text-left flex items-center gap-3 px-4 py-3 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">lock_reset</span>Đổi mật khẩu
+</button>
+<button type="button" data-panel-target="panel-notif" class="side-nav-item w-full text-left flex items-center gap-3 px-4 py-3 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">notifications</span>Thông báo
+</button>
+<!-- Owner-only, like every button in this group - a stranger's likes/
+     comments are not this viewer's to browse, the same reasoning
+     #my-posts-tabs's draft/published split is hidden on someone else's
+     profile for. -->
+<button type="button" data-panel-target="panel-activity" class="side-nav-item w-full text-left flex items-center gap-3 px-4 py-3 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined">schedule</span>Hoạt động gần đây
+</button>
+</div>
+<!-- Session actions, same row idiom as admin.html's rail. Hidden in the markup
+     and revealed by renderNavAuthState() in api.js (the [data-session-only]
+     hook) only when a session exists: this rail also renders for a signed-OUT
+     visitor on someone else's public profile (/profile.html?user=<id>), and
+     there a logout row would have nothing to log out of. Deliberately OUTSIDE
+     #profile-owner-actions - profile.js hides that whole group on a ?user=
+     view, but your own session is still yours to end from there. -->
+<hr data-session-only class="hidden my-1" style="border-color: rgb(var(--ed-divider))">
+<button type="button" data-session-only class="side-nav-item hidden w-full text-left flex items-center gap-3 px-4 py-3 transition-all font-label-md text-label-md" data-action="logout">
+<span class="material-symbols-outlined">logout</span>Đăng xuất
+</button>
+</div>
+</aside>
+
+<!-- Main Content Area. .side-rail-content is the shared half of the rail pair:
+     it takes whatever the rail leaves, on this page and on admin.html alike. -->
+<div class="side-rail-content flex flex-col gap-gutter min-w-0">
+
+<!-- Hero Profile Section - Facebook-style cover + overlapping avatar. See the
+     ".profile-cover/.profile-avatar-wrap" block in editorial.css for how the
+     overlap is positioned and why. -->
+<section class="ed-panel ed-panel--flush overflow-hidden">
+<div class="profile-cover" id="profile-cover-wrap">
+<img id="profile-cover" class="profile-cover-img" alt="">
+<!-- Owner-only, like #profile-owner-actions in the rail: loadPublicProfile()
+     hides both the same way. Replaces the old "Ảnh đại diện"/"Ảnh bìa" upload
+     fields that used to live in the "Chỉnh sửa hồ sơ" panel - one click
+     straight on the picture that is actually changing, Facebook-style,
+     rather than a detour through a form for what is otherwise a one-step
+     action. Still routes through the exact same crop modal and upload
+     endpoint - see uploadAvatarFile()/uploadCoverFile() in profile.js -
+     just triggered here instead of from there, and saved the moment the
+     crop is confirmed rather than waiting on a separate "Lưu". -->
+<!-- Replaces the sidebar's old "Chỉnh sửa hồ sơ" entry (see the comment left
+     in its place in the rail above) - same data-panel-target, so
+     showPanel()'s existing delegated listener picks this up with no JS
+     changes of its own. The header dropdown's own "Chỉnh sửa hồ sơ" entry
+     (js/api.js) and the #avatar hash still reach the same panel too.
+     Top-left, level with the camera icon at top-right (not stacked under
+     it): both sit on the cover's own top edge, which - unlike the bottom
+     edge - .profile-avatar-wrap never reaches at any width.
+     Icon-only now, like the two camera buttons beside it, rather than a
+     permanently-spelled-out pill - all three read as one small family of
+     controls sitting on the photo instead of one pill and two circles.
+     data-tooltip is what actually names each on hover/focus (see
+     .profile-icon-tooltip in editorial.css); title is kept alongside it as
+     the plain-text fallback screen readers and a long-press on touch still
+     get for free. -->
+<button type="button" data-panel-target="panel-edit" class="profile-photo-btn profile-photo-btn--edit" id="profile-edit-btn" title="Chỉnh sửa hồ sơ" data-tooltip="Chỉnh sửa hồ sơ" aria-label="Chỉnh sửa hồ sơ">
+<span class="material-symbols-outlined" aria-hidden="true">edit</span>
+</button>
+<label class="profile-photo-btn profile-photo-btn--cover" id="cover-photo-btn" title="Đổi ảnh bìa" data-tooltip="Đổi ảnh bìa" aria-label="Đổi ảnh bìa">
+<span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+<input type="file" id="cover-file-input" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+</label>
+<div class="profile-avatar-wrap">
+<img id="profile-avatar" class="w-32 h-32 md:w-40 md:h-40 object-cover" style="border-radius: 6px; border: 3px solid rgb(var(--ed-surface-lowest)); box-shadow: 0 0 0 1px rgb(var(--ed-divider))">
+<label class="profile-photo-btn profile-photo-btn--avatar" id="avatar-photo-btn" title="Đổi ảnh đại diện" data-tooltip="Đổi ảnh đại diện" aria-label="Đổi ảnh đại diện">
+<span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+<input type="file" id="avatar-file-input" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+</label>
+</div>
+</div>
+<div class="profile-hero-text min-w-0">
+<h1 class="ed-hero-title mb-2 break-words" id="profile-name"></h1>
+<p class="ed-icon-faint font-label-md text-label-md break-words" id="profile-email"></p>
+<!-- Vị trí/Số điện thoại - PUBLIC on purpose (see the note in their own
+     input's placeholder on panel-edit), shown to any visitor the same way
+     bio already is. Each hidden independently when the account has not set
+     it, the same convention #profile-status-view uses for its own empty
+     state - see loadProfile()/loadPublicProfile() in profile.js. -->
+<div class="profile-meta-row flex flex-wrap items-center">
+<p class="ed-icon-faint font-label-md text-label-md break-words flex items-center gap-1 hidden" id="profile-location">
+<span class="material-symbols-outlined text-[16px]" aria-hidden="true">location_on</span><span id="profile-location-text"></span>
+</p>
+<p class="ed-icon-faint font-label-md text-label-md break-words flex items-center gap-1 hidden" id="profile-phone">
+<span class="material-symbols-outlined text-[16px]" aria-hidden="true">call</span><span id="profile-phone-text"></span>
+</p>
+</div>
+<p class="ed-dek" id="profile-bio"></p>
+<!-- Thanh trạng thái - a Facebook-style one-line status, distinct from the
+     bio above it (that one is a paragraph, edited on its own form; this is a
+     single line, saved as you leave the field - see profile.js). Two
+     elements sharing the slot: the OWNER gets the live <input>, a visitor
+     gets plain text (or nothing, if it is empty) - loadProfile()/
+     loadPublicProfile() in profile.js toggle which one is shown, never both
+     at once. -->
+<p class="ed-icon-faint font-body-sm text-body-sm mt-2 hidden break-words" id="profile-status-view"></p>
+<div class="mt-2 max-w-sm hidden" id="profile-status-edit">
+<input type="text" id="profile-status-input" placeholder="Bạn đang nghĩ gì?" maxlength="200" class="w-full ed-input px-4 py-2.5 rounded font-body-sm text-body-sm focus:outline-none transition-all">
+</div>
+<!-- Real impact metrics, not the reference mockup's "1.2K phản biện học
+     thuật" / "06 ấn bản đã biên tập" - neither has a field in this app's data
+     model. Both numbers here are derived from the SAME published-posts list
+     the panel below already fetches (loadMyPosts()/getPublicUserPosts() in
+     js/profile.js) - published count and the sum of their view counts - so
+     there is no second request and nothing to drift out of step with the
+     "Bài viết của tôi" list underneath. -->
+<div class="flex items-center justify-start gap-6 mt-4 pt-4" id="profile-stats-row">
+<div>
+<div class="ed-stat-number" id="profile-stat-posts" style="font-size: 1.375rem">-</div>
+<div class="ed-label mt-0.5">Bài viết</div>
+</div>
+<div>
+<div class="ed-stat-number" id="profile-stat-views" style="font-size: 1.375rem">-</div>
+<div class="ed-label mt-0.5">Lượt xem</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Panel: my posts -->
+<section class="profile-panel" id="panel-posts">
+<div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+<h2 class="ed-section-title" id="my-posts-heading">Bài viết của tôi</h2>
+<a data-writer-only href="/write.html" class="ed-btn-primary tap-target px-5 py-2">+ Viết bài</a>
+</div>
+<!-- Real tabs, not the reference mockup's static "42 / 04" counts: both
+     numbers and both lists come from the SAME already-fetched "mine=true"
+     result (profile.js loadMyPosts()), split by the post's own `status`
+     field, so there is no second request and the two counts can never drift
+     out of step with the list under them. Hidden on someone ELSE's profile
+     (?user=<id>) - a stranger's drafts are not this viewer's to browse, and
+     renderPublicPostsList() in profile.js never calls the function that would
+     show this row. -->
+<div class="flex items-center gap-2 mb-4" id="my-posts-tabs">
+<button type="button" class="ed-post-tab is-active" data-post-tab="published">Đã xuất bản <span class="ed-post-tab-count" id="published-count">0</span></button>
+<button type="button" class="ed-post-tab" data-post-tab="draft">Bản nháp <span class="ed-post-tab-count" id="draft-count">0</span></button>
+</div>
+<div id="my-posts-list" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+<p class="ed-icon-soft col-span-full">Đang tải...</p>
+</div>
+</section>
+
+<!-- Panel: edit profile -->
+<section class="profile-panel hidden" id="panel-edit">
+<div class="ed-panel p-6 sm:p-8">
+<h3 class="ed-section-title mb-6">Chỉnh sửa hồ sơ</h3>
+<form id="edit-profile-form" class="flex flex-col gap-4 max-w-xl">
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase">Họ và tên</label>
+<input name="name" class="w-full px-4 py-3 ed-input rounded font-body-md text-body-md focus:outline-none transition-all">
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase">Giới thiệu ngắn</label>
+<textarea name="bio" rows="3" class="w-full px-4 py-3 ed-input rounded font-body-sm text-body-sm resize-none focus:outline-none transition-all"></textarea>
+</div>
+<!-- Vị trí/Số điện thoại: both PUBLIC, unlike email (never shown on a public
+     profile - see loadPublicProfile() in profile.js) - the placeholder says
+     so directly in the one place someone typing a phone number in is
+     actually looking, rather than a separate note they could type past
+     without reading. Neither is required; an empty value is simply not
+     shown (see #profile-location/#profile-phone, hidden when blank the
+     same way #profile-status-view already is). -->
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase">Vị trí</label>
+<input name="location" placeholder="Ví dụ: Hà Nội, Việt Nam — thông tin này sẽ hiển thị công khai" class="w-full px-4 py-3 ed-input rounded font-body-sm text-body-sm focus:outline-none transition-all">
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase">Số điện thoại</label>
+<input name="phone" type="tel" placeholder="Ví dụ: 0912 345 678 — thông tin này sẽ hiển thị công khai" class="w-full px-4 py-3 ed-input rounded font-body-sm text-body-sm focus:outline-none transition-all">
+</div>
+<!-- Avatar and cover are no longer edited here - see the camera-icon buttons
+     on the picture themselves at the top of the page (profile-photo-btn,
+     wired in profile.js) for both. One click on the actual picture, not a
+     form field naming it. -->
+<div class="flex gap-4 justify-end mt-2">
+<button type="submit" class="tap-target px-8 py-2 font-label-md text-label-md uppercase ed-btn-primary transition-colors">Lưu</button>
+</div>
+</form>
+</div>
+</section>
+
+<!-- Panel: change password -->
+<section class="profile-panel hidden" id="panel-password">
+<div class="ed-panel p-6 sm:p-8">
+<h3 class="ed-section-title mb-1">Đổi mật khẩu</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6">Nhập mật khẩu hiện tại, rồi nhập mật khẩu mới hai lần để xác nhận.</p>
+<p id="password-error" class="hidden text-sm text-error mb-4"></p>
+<form id="password-form" class="flex flex-col gap-6 max-w-xl">
+<!-- Required for a local account: a valid session alone is no longer enough to
+     change the password, so a stolen token cannot be turned into ownership of the
+     account. Hidden for Google accounts (they have no local password to prove) by
+     loadProfile() in js/profile.js. -->
+<div class="flex flex-col gap-2" id="current-password-row">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase">Mật khẩu hiện tại</label>
+<input name="currentPassword" type="password" autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-3 ed-input rounded font-body-md text-body-md focus:outline-none transition-all">
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase">Mật khẩu mới</label>
+<input name="newPassword" type="password" autocomplete="new-password" required minlength="6" placeholder="••••••••" class="w-full px-4 py-3 ed-input rounded font-body-md text-body-md focus:outline-none transition-all">
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase">Nhập lại mật khẩu mới</label>
+<input name="confirmPassword" type="password" autocomplete="new-password" required minlength="6" placeholder="••••••••" class="w-full px-4 py-3 ed-input rounded font-body-md text-body-md focus:outline-none transition-all">
+</div>
+<div class="flex gap-4 justify-end">
+<button type="submit" class="tap-target px-8 py-2 font-label-md text-label-md uppercase ed-btn-primary transition-colors">Cập nhật</button>
+</div>
+</form>
+</div>
+</section>
+
+<!-- Panel: notifications -->
+<section class="profile-panel hidden" id="panel-notif">
+<div class="ed-panel p-6 sm:p-8" id="profile-notif-box">
+<h3 class="ed-section-title mb-1">Thông báo</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6">Nhận email mỗi khi có bài viết mới được đăng.</p>
+<label class="flex items-center justify-between cursor-pointer gap-4">
+<span class="font-body-md text-body-md text-on-surface">Nhận email bài viết mới</span>
+<span class="relative inline-flex shrink-0">
+<input type="checkbox" id="notif-toggle" class="sr-only">
+<span class="ui-switch" aria-hidden="true"></span>
+</span>
+</label>
+</div>
+</section>
+
+<!-- Panel: recent activity (owner only - see #profile-owner-actions above,
+     which this button lives inside). Likes and comments across the whole
+     site, newest first - GET /api/auth/me/activity in js/profile.js
+     loadActivity(). -->
+<section class="profile-panel hidden" id="panel-activity">
+<div class="ed-panel p-6 sm:p-8">
+<h3 class="ed-section-title mb-6">Hoạt động gần đây</h3>
+<div class="flex flex-col gap-1" id="activity-list"></div>
+</div>
+</section>
+
+</div>
+</main>
+
+<!-- Footer -->
+<!-- Just the copyright line now - Liên hệ/Điều khoản are gone (the mailto
+     link and the terms page both), so a footer that only ever held those and
+     this line does not need to exist as anything more. -->
+<footer class="ed-footer w-full py-3 mt-auto">
+<div class="text-center px-sm md:px-margin-page max-w-7xl mx-auto font-body-sm text-body-sm">© <span id="footer-year"></span> <span data-footer-text data-fallback="TuanPA.">TuanPA.</span></div>
+</footer>
+
+<script>
+// UI-only logic for this page (all API/auth logic stays in /js/api.js + /js/profile.js).
+
+// Left-nav buttons switch which panel is shown in the content column.
+const panelButtons = document.querySelectorAll('[data-panel-target]');
+
+// Puts the rail back on its reference row, "Trang cá nhân", so the card sits in
+// the same place whichever panel is open - see resetSideRailScroll() in
+// /js/api.js. Wrapped because of load order, not caution: this inline script is
+// parsed ABOVE the api.js script tag below, so the first call (showPanelFromHash()
+// at the bottom of this block, for a /profile.html#password deep link) happens
+// before api.js has defined it. Nothing has had a chance to scroll the rail at
+// that point anyway; the DOMContentLoaded reset below is the one that counts.
+const resetRail = () => {
+  if (typeof resetSideRailScroll === 'function') resetSideRailScroll();
+};
+
+function showPanel(target) {
+  panelButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.panelTarget === target));
+  document.querySelectorAll('.profile-panel').forEach((panel) => {
+    panel.classList.toggle('hidden', panel.id !== target);
+  });
+  resetRail();
+}
+panelButtons.forEach((btn) => {
+  btn.addEventListener('click', () => showPanel(btn.dataset.panelTarget));
+});
+
+// And once on load: a reload can hand the rail back with its inner scroll where
+// the reader left it, which would put "Trang cá nhân" above the position every
+// later switch returns it to.
+document.addEventListener('DOMContentLoaded', resetRail);
+
+// Panels are also reachable by deep link (/profile.html#avatar, #password,
+// #notif, #posts) - the top-nav account menu no longer carries those rows,
+// but bookmarks and external links still do. Map the hashes to panel ids and
+// keep responding to hashchange so they work while already on the page too.
+const HASH_PANELS = { '#avatar': 'panel-edit', '#password': 'panel-password', '#notif': 'panel-notif', '#posts': 'panel-posts', '#activity': 'panel-activity' };
+function showPanelFromHash() {
+  const target = HASH_PANELS[window.location.hash];
+  if (target) showPanel(target);
+  // Closes the header's avatar dropdown after a #hash jump FROM one of its
+  // own links (see the comment on this same fix in js/api.js) - a harmless
+  // no-op at the initial call below, where nothing is open yet.
+  document.getElementById('user-dropdown-menu')?.classList.add('hidden');
+}
+window.addEventListener('hashchange', showPanelFromHash);
+showPanelFromHash();
+
+// profile.js hides #profile-owner-actions and #profile-notif-box when viewing
+// someone ELSE's profile (?user=<id>). Those panels are then unreachable, so
+// fall back to the posts panel if one of them happened to be open.
+(function syncOwnerPanels() {
+  const watched = ['profile-owner-actions', 'profile-notif-box']
+    .map((id) => document.getElementById(id))
+    .filter(Boolean);
+  const notifBtn = document.querySelector('[data-panel-target="panel-notif"]');
+  const notifBox = document.getElementById('profile-notif-box');
+  const ownerActions = document.getElementById('profile-owner-actions');
+  const sync = () => {
+    if (notifBtn && notifBox) notifBtn.classList.toggle('hidden', notifBox.classList.contains('hidden'));
+    // Falls back only when the OWNER-only group was itself the thing that
+    // got hidden (viewing someone else's profile - the case this function
+    // exists for) and the active panel's own button lives inside it - not
+    // "is the active button invisible for ANY reason", which used to also
+    // match profile.html hiding its whole side rail on mobile (see the
+    // #profile-main media query in editorial.css) and reverted every panel
+    // switch made from the header dropdown - Chỉnh sửa hồ sơ, Đổi mật khẩu,
+    // Thông báo, Hoạt động gần đây - back to "Bài viết của tôi" the instant
+    // this ran, since offsetParent is null for BOTH reasons alike.
+    const active = document.querySelector('[data-panel-target].active');
+    if (ownerActions?.classList.contains('hidden') && active && ownerActions.contains(active)) {
+      showPanel('panel-posts');
+    }
+  };
+  watched.forEach((el) => {
+    new MutationObserver(sync).observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
+  sync();
+})();
+</script>
+
+<!-- Crop modal, shared by the avatar and cover uploads (js/profile.js
+     initCropper() & friends) - same drag/resize/canvas mechanism as
+     admin.html's hero-image cropper (openHeroCropper in js/admin.js), ported
+     rather than shared: that one is also locked to a SECOND, narrower "phone
+     band" ratio the homepage hero box needs and this page's fixed-ratio
+     avatar/cover crop does not, so reusing it as-is would drag along a
+     preview nothing here uses. `data-crop-ratio` on the modal is set to "1"
+     (avatar) or the cover's own 3/1 before it opens - see openCropper(). -->
+<div class="fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto p-4 bg-black/40" id="crop-modal">
+<div class="ed-panel p-6 sm:p-8 max-w-2xl w-full my-auto">
+<h3 class="ed-section-title mb-2" id="crop-modal-title">Cắt ảnh</h3>
+<p class="ed-icon-faint font-body-sm text-body-sm mb-4">Kéo khung để di chuyển, kéo bốn góc để phóng to / thu nhỏ.</p>
+<p id="crop-error" class="hidden text-sm text-error mb-4"></p>
+<div class="relative inline-block max-w-full mx-auto overflow-hidden" id="crop-stage">
+<img id="crop-img" alt="Ảnh cần cắt" class="block max-w-full" draggable="false" style="max-height:55vh; width:auto; user-select:none; -webkit-user-select:none; touch-action:none">
+<div id="crop-box" class="absolute" style="top:0; left:0; width:100%; height:100%; border:2px solid rgb(var(--ed-accent)); box-shadow:0 0 0 9999px rgb(0 0 0 / 0.55); cursor:move; touch-action:none">
+<div data-crop-handle="nw" class="absolute rounded-full" style="top:0; left:0; width:14px; height:14px; transform:translate(-4px,-4px); background:rgb(var(--ed-accent)); cursor:nwse-resize; touch-action:none"></div>
+<div data-crop-handle="ne" class="absolute rounded-full" style="top:0; right:0; width:14px; height:14px; transform:translate(4px,-4px); background:rgb(var(--ed-accent)); cursor:nesw-resize; touch-action:none"></div>
+<div data-crop-handle="sw" class="absolute rounded-full" style="bottom:0; left:0; width:14px; height:14px; transform:translate(-4px,4px); background:rgb(var(--ed-accent)); cursor:nesw-resize; touch-action:none"></div>
+<div data-crop-handle="se" class="absolute rounded-full" style="bottom:0; right:0; width:14px; height:14px; transform:translate(4px,4px); background:rgb(var(--ed-accent)); cursor:nwse-resize; touch-action:none"></div>
+</div>
+</div>
+<div class="flex flex-wrap gap-4 justify-end mt-6">
+<button type="button" id="crop-use-original" class="ed-btn-text tap-target px-6 py-2">Dùng ảnh gốc</button>
+<button type="button" id="crop-cancel" class="ed-btn-text tap-target px-6 py-2">Huỷ</button>
+<button type="button" id="crop-apply" class="ed-btn-primary tap-target">Cắt và tải lên</button>
+</div>
+</div>
+</div>
+
+<!-- Click-to-enlarge viewer for the avatar/cover photo - works for a visitor
+     looking at someone else's profile the same as it does for the owner's
+     own, since the camera/edit icons only ever cover their own small corner
+     of either picture, leaving the rest of it free to tap. One image, no
+     zoom/pan/prev-next: unlike post.html's own #lightbox (an article's
+     inline image gallery), there is never more than one photo to look at
+     here, so that whole apparatus would be dead weight - see
+     .profile-lightbox in editorial.css and wireProfileLightbox() in
+     profile.js for the rest of it. -->
+<div class="profile-lightbox hidden" id="profile-lightbox" role="dialog" aria-modal="true" aria-label="Xem ảnh">
+<button type="button" class="profile-lightbox-close" id="profile-lightbox-close" aria-label="Đóng">
+<span class="material-symbols-outlined" aria-hidden="true">close</span>
+</button>
+<img class="profile-lightbox-img" id="profile-lightbox-img" alt="">
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/profile.js"></script>
+</body>
+</html>

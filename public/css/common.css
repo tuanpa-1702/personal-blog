@@ -1,0 +1,2143 @@
+/* ==========================================================================
+   Theme tokens - the single source of truth for colour, in both themes
+   Every colour in the product resolves through one of these variables: the
+   Tailwind utilities reach them via public/js/tailwind-config.js (which maps
+   each token name to `rgb(var(--c-NAME) / <alpha-value>)`), and the CSS below
+   plus the per-page <style> blocks reference them directly. Nothing paints a
+   literal hex any more, and that is what makes the dark theme a single class:
+   `<html class="dark">` re-points the variables and the whole site follows -
+   there is not one `dark:` variant anywhere in the markup.
+
+   Why RGB CHANNELS ("53 37 205") and not `#3525cd`: Tailwind's opacity
+   modifiers compile to `rgb(var(--c-primary) / 0.1)`, so the variable has to
+   hold the channels alone. Storing a finished colour would silently break every
+   `bg-primary-container/10`-style wash in the pages.
+
+   The dark palette is not the light one inverted. Three deliberate departures:
+   - The accents flip to their light tones (primary and electric-indigo become
+     the pale end of the indigo ramp) and `on-primary` becomes dark ink. That is
+     Material's own dark convention, and it keeps BOTH uses of the accent
+     working: `text-electric-indigo` links stay legible on a dark page, and
+     `bg-electric-indigo text-on-primary` buttons stay legible as fills. A
+     filled accent must therefore pair with `text-on-primary`, never
+     `text-white`.
+   - The glass panes stop being white-on-white: `--c-glass-surface` becomes a
+     translucent navy and the hairline a faint indigo, because a 70%-white pane
+     over a near-black page reads as fog rather than glass.
+   - The ambient indigo bloom under every card becomes a real black drop shadow.
+     A coloured glow cannot separate a raised pane from a page that is already
+     darker than the glow itself.
+   The M3 "fixed" roles are identical in both themes by definition - they exist
+   for content sitting on a surface that does not flip, e.g. a headline over a
+   post's cover photo.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+
+  /* Brand / primary */
+  --c-primary: 53 37 205;
+  --c-on-primary: 255 255 255;
+  --c-primary-container: 79 70 229;
+  --c-on-primary-container: 218 215 255;
+  --c-electric-indigo: 79 70 229;
+  --c-surface-tint: 77 68 227;
+
+  /* Secondary - the sky blue that ends every brand gradient */
+  --c-secondary: 0 101 145;
+  --c-on-secondary: 255 255 255;
+  --c-secondary-container: 57 184 253;
+  --c-on-secondary-container: 0 70 102;
+
+  /* Tertiary - the magenta accents */
+  --c-tertiary: 135 22 91;
+  --c-on-tertiary: 255 255 255;
+  --c-tertiary-container: 166 50 116;
+  --c-on-tertiary-container: 255 206 226;
+
+  /* Error */
+  --c-error: 186 26 26;
+  --c-on-error: 255 255 255;
+  --c-error-container: 255 218 214;
+  --c-on-error-container: 147 0 10;
+
+  /* Success. Not an M3 role, but the admin users tab needs a third semantic
+     colour for "this account is active" that is neither brand nor error, and it
+     has to flip like the rest - #16a34a on a near-black card is unreadable. */
+  --c-success: 22 163 74;
+  --c-on-success: 255 255 255;
+  --c-success-text: 21 128 61;
+
+  /* Surfaces, from the page backdrop up to the highest raised container.
+     A NEUTRAL soft white since 2026-09-11: the backdrop used to carry a violet
+     cast (250 248 255) plus two radial glows, and the reader asked for a plain
+     light page the ink stands out of - flat colour, no gradient, in both themes. */
+  --c-background: 250 250 251;
+  --c-on-background: 19 27 46;
+  --c-surface: 250 250 251;
+  --c-on-surface: 19 27 46;
+  --c-surface-variant: 218 226 253;
+  --c-on-surface-variant: 70 69 85;
+  --c-surface-dim: 210 217 244;
+  --c-surface-bright: 250 248 255;
+  --c-surface-container-lowest: 255 255 255;
+  --c-surface-container-low: 242 243 255;
+  --c-surface-container: 234 237 255;
+  --c-surface-container-high: 226 231 255;
+  --c-surface-container-highest: 218 226 253;
+
+  /* Outlines */
+  --c-outline: 119 117 135;
+  --c-outline-variant: 199 196 216;
+
+  /* Inverse pair */
+  --c-inverse-surface: 40 48 68;
+  --c-inverse-on-surface: 238 240 255;
+  --c-inverse-primary: 195 192 255;
+
+  /* Kept only because the compiled tailwind.css still carries from-/to-
+     utilities for these two names; no gradient has used them since the page
+     backdrop went flat on 2026-09-11. */
+  --c-bg-gradient-start: 248 250 252;
+  --c-bg-gradient-end: 238 242 255;
+
+  /* M3 "fixed" roles - identical in both themes, by definition */
+  --c-primary-fixed: 226 223 255;
+  --c-primary-fixed-dim: 195 192 255;
+  --c-on-primary-fixed: 15 0 105;
+  --c-on-primary-fixed-variant: 51 35 204;
+  --c-secondary-fixed: 201 230 255;
+  --c-secondary-fixed-dim: 137 206 255;
+  --c-on-secondary-fixed: 0 30 47;
+  --c-on-secondary-fixed-variant: 0 76 110;
+  --c-tertiary-fixed: 255 216 231;
+  --c-tertiary-fixed-dim: 255 175 211;
+  --c-on-tertiary-fixed: 61 0 38;
+  --c-on-tertiary-fixed-variant: 133 20 90;
+
+  /* Alpha baked in - use these WITHOUT an opacity modifier */
+  --c-glass-surface: rgba(255, 255, 255, 0.7);
+  --c-glass-border: rgba(255, 255, 255, 0.4);
+  --c-field: rgba(19, 27, 46, 0.05);
+  --c-scrim: rgba(19, 27, 46, 0.5);
+
+  /* The editor's highlighter ("tô sáng"). Channels, not a finished colour, like
+     every other token here - and a PAIR, because a highlight is a background
+     that has to keep its own text readable. execCommand writes the colour it is
+     handed straight into the document, which is exactly what these replace: a
+     literal #fef08a survived into the dark theme and put pale yellow behind
+     near-white ink. js/write.js rewrites the command's output to .rt-mark and
+     the colour becomes the theme's business. */
+  --c-rt-mark: 254 240 138;
+  --c-rt-mark-ink: 19 27 46;
+
+  /* Glass washes: the stack of translucent layers a card is built from - the
+     meta chips inside it, the pills sitting on it, a hover lift - plus the
+     hairline that catches the light along a pane's top edge. Light is white
+     over colour; dark is light over ink at a fraction of the alpha, because a
+     pale film reads much faster on a dark ground. */
+  --glass-wash-1: rgba(255, 255, 255, 0.5);
+  --glass-wash-2: rgba(255, 255, 255, 0.55);
+  --glass-wash-3: rgba(255, 255, 255, 0.82);
+  --glass-edge: rgba(255, 255, 255, 0.6);
+  --glass-seam: rgba(255, 255, 255, 0.65);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* Elevation. --shadow-ambient is the site's signature indigo bloom;
+     --shadow-ambient-t is the same shadow thrown upwards, for the footer. */
+  --shadow-ambient: 0 20px 40px rgba(79, 70, 229, 0.08);
+  --shadow-ambient-t: 0 -20px 40px rgba(79, 70, 229, 0.08);
+  --shadow-pill: 0 2px 8px rgba(19, 27, 46, 0.05);
+  --shadow-lift: 0 26px 48px rgba(79, 70, 229, 0.14);
+  --shadow-cta: 0 6px 16px rgba(79, 70, 229, 0.32);
+  --shadow-avatar: 0 10px 22px rgba(79, 70, 229, 0.18);
+  --shadow-focus: 0 0 0 4px rgba(79, 70, 229, 0.14);
+  --shadow-cta-hover: 0 14px 30px rgba(79, 70, 229, 0.36);
+  --shadow-cta-lg: 0 10px 24px rgba(79, 70, 229, 0.28);
+  /* The Google button's hover lift. A token like the rest so the same surface
+     does not keep an indigo glow on a page darker than the glow. */
+  --shadow-google: 0 8px 20px rgba(79, 70, 229, 0.12);
+  /* The editor canvas (write.html) sits lighter than the rest of the site on
+     purpose, so its two-column pane does not out-weigh a reading page. */
+  --shadow-editor: 0 10px 30px rgba(79, 70, 229, 0.05);
+
+  /* The brand gradient - the same two stops as the `from-electric-indigo
+     to-secondary-container` utilities in the markup, so both spellings flip
+     together. Text on it takes rgb(var(--c-on-primary)). */
+  --brand-gradient: linear-gradient(to right, rgb(var(--c-electric-indigo)), rgb(var(--c-secondary-container)));
+
+  /* The near-opaque overlays: the account menu, the mobile menu and the auth
+     card sit over page content, so they trade translucency for legibility. */
+  --menu-surface: rgba(255, 255, 255, 0.98);
+  --menu-border: rgba(19, 27, 46, 0.08);
+  --menu-shadow: 0 24px 48px rgba(19, 27, 46, 0.18), 0 2px 6px rgba(19, 27, 46, 0.06);
+  --modal-shadow: 0 32px 64px rgba(19, 27, 46, 0.22), 0 0 0 1px rgba(79, 70, 229, 0.06);
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* The accents move to the pale end of each ramp and `on-*` becomes dark ink,
+     so the same token works as text on the page AND as a filled button. */
+  --c-primary: 195 192 255;
+  --c-on-primary: 33 0 155;
+  --c-primary-container: 169 164 255;
+  --c-on-primary-container: 23 0 143;
+  --c-electric-indigo: 182 178 255;
+  --c-surface-tint: 195 192 255;
+
+  --c-secondary: 127 208 255;
+  --c-on-secondary: 0 51 83;
+  --c-secondary-container: 79 192 255;
+  --c-on-secondary-container: 0 51 78;
+
+  --c-tertiary: 255 175 211;
+  --c-on-tertiary: 91 5 55;
+  --c-tertiary-container: 255 157 203;
+  --c-on-tertiary-container: 79 0 45;
+
+  /* The error pair swaps ends: light red text, deep red container. */
+  --c-error: 255 180 171;
+  --c-on-error: 105 0 5;
+  --c-error-container: 147 0 10;
+  --c-on-error-container: 255 218 214;
+
+  --c-success: 74 222 128;
+  --c-on-success: 4 21 12;
+  --c-success-text: 134 239 172;
+
+  /* Surfaces: a deep blue-black page, with each container step a little lighter
+     so the same elevation ladder still reads. Not pure black - the design's
+     indigo cast is what keeps it recognisably this site. */
+  --c-background: 11 16 32;
+  --c-on-background: 231 233 247;
+  --c-surface: 11 16 32;
+  --c-on-surface: 231 233 247;
+  --c-surface-variant: 43 51 80;
+  --c-on-surface-variant: 195 199 220;
+  --c-surface-dim: 7 11 22;
+  --c-surface-bright: 35 42 68;
+  --c-surface-container-lowest: 6 10 20;
+  --c-surface-container-low: 18 24 41;
+  --c-surface-container: 22 29 50;
+  --c-surface-container-high: 31 39 64;
+  --c-surface-container-highest: 41 50 79;
+
+  --c-outline: 141 147 173;
+  --c-outline-variant: 58 66 96;
+
+  --c-inverse-surface: 231 233 247;
+  --c-inverse-on-surface: 31 39 64;
+  --c-inverse-primary: 79 70 229;
+
+  --c-bg-gradient-start: 13 19 38;
+  --c-bg-gradient-end: 20 26 51;
+
+  /* The "fixed" roles deliberately do NOT change - see the header note. */
+
+  /* Glass over ink: a translucent navy pane with a faint indigo hairline. */
+  --c-glass-surface: rgba(22, 29, 50, 0.72);
+  --c-glass-border: rgba(195, 192, 255, 0.14);
+  --c-field: rgba(231, 233, 247, 0.06);
+  --c-scrim: rgba(2, 5, 12, 0.72);
+
+  /* A saturated amber over dark ink: a highlighter on a near-black page reads as
+     the light thing, so the pair swaps ends like the error roles above. */
+  --c-rt-mark: 250 204 21;
+  --c-rt-mark-ink: 26 22 0;
+
+  --glass-wash-1: rgba(231, 233, 247, 0.06);
+  --glass-wash-2: rgba(231, 233, 247, 0.08);
+  --glass-wash-3: rgba(231, 233, 247, 0.12);
+  --glass-edge: rgba(195, 192, 255, 0.16);
+  --glass-seam: rgba(195, 192, 255, 0.14);
+  --glass-inset: inset 0 1px 0 rgba(231, 233, 247, 0.06);
+
+  /* Black drop shadows instead of the indigo bloom: a coloured glow cannot
+     separate a raised pane from a page that is darker than the glow. */
+  --shadow-ambient: 0 20px 40px rgba(0, 0, 0, 0.55);
+  --shadow-ambient-t: 0 -20px 40px rgba(0, 0, 0, 0.45);
+  --shadow-pill: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lift: 0 26px 48px rgba(0, 0, 0, 0.6);
+  --shadow-cta: 0 6px 16px rgba(0, 0, 0, 0.5);
+  --shadow-avatar: 0 10px 22px rgba(0, 0, 0, 0.5);
+  --shadow-focus: 0 0 0 4px rgba(182, 178, 255, 0.22);
+  --shadow-cta-hover: 0 14px 30px rgba(0, 0, 0, 0.55);
+  --shadow-cta-lg: 0 10px 24px rgba(0, 0, 0, 0.5);
+  --shadow-google: 0 8px 20px rgba(0, 0, 0, 0.5);
+  --shadow-editor: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  --menu-surface: rgba(18, 24, 41, 0.98);
+  --menu-border: rgba(195, 192, 255, 0.16);
+  --menu-shadow: 0 24px 48px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.5);
+  --modal-shadow: 0 32px 64px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(195, 192, 255, 0.1);
+}
+/* ==========================================================================
+   Typography - one Vietnamese-capable sans for the whole site
+   Inter, which replaces Plus Jakarta Sans (itself the replacement for Be
+   Vietnam Pro, itself the replacement for Geist headings/labels + Inter
+   body). Google Fonts ships it with a vietnamese
+   subset, so the stacked diacritics (ế ộ ữ ằ ỗ) are drawn by the family
+   rather than left to whatever the OS happens to have - and because the css2
+   API splits the family by unicode-range, a page of Vietnamese prose fetches
+   that face alone and not the latin ones it cannot use.
+   One family also means no headline/body mismatch.
+   Everything inherits it from the <html>/<body> rules below - nav, footer,
+   headings, article copy, chips, badges, buttons and form controls - so a
+   per-element font-family is only ever for a deliberate exception (the
+   Material Symbols icon font, or the editor's serif / monospace choices).
+   The variable is the single source of truth for hand-written CSS here and in
+   the per-page <style> blocks. The Tailwind font-* utilities carry the SAME
+   list, but as a compiled copy: VI_SANS in tailwind.config.js is baked into
+   public/css/tailwind.css, and `npm run build:css` cannot run on this mount
+   (node_modules/.bin/tailwindcss is present but broken), so a rename has to be
+   made in both files by hand or it has no effect. The six pages load the
+   family from Google Fonts with a <link>, requesting the weights the design was
+   built against (400/500/600/700 + 400/700 italic).
+   The token is named for the REQUIREMENT - a sans that covers Vietnamese - not
+   for the family currently filling it, which is why swapping the family does
+   not mean renaming the variable in every per-page <style> block.
+   The fallbacks are the OS UI sans fonts, all of which cover Vietnamese, so the
+   swap period - and any load where Google Fonts is unreachable - still shows
+   correct diacritics instead of a Times-like default.
+   ========================================================================== */
+:root {
+  --font-vi-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Set on <html> as well as <body> so the stack applies even if the Tailwind CDN
+   is slow or blocked (its Preflight declares the same list on <html> from
+   theme.fontFamily.sans, so whichever lands last resolves identically). */
+html {
+  font-family: var(--font-vi-sans);
+  /* Reserve the scrollbar's gutter whether or not this page currently needs one.
+     Every page centres a max-w-7xl box, so a scrollbar appearing re-centres that
+     box by half the gutter and everything inside it slides sideways - the left
+     rail included. Which makes it a JUMP rather than a constant, because one
+     admin tab or profile panel is tall enough to scroll and the next is not:
+     measured across such a switch, the gutter went 15px -> 0 and the rail's left
+     edge went 97 -> 104. Reserving the gutter removes the toggle, so the rail
+     holds one horizontal position on every panel of every page. */
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: var(--font-vi-sans);
+  /* FLAT, in both themes: one colour and nothing painted over it. The two radial
+     blooms that used to sit here (--page-glow, removed 2026-09-11) read as a
+     gradient wash behind the prose, and the reader's ask was a plain light page
+     the ink stands out of - and the same plainness in dark. */
+  background-color: rgb(var(--c-background));
+  color: rgb(var(--c-on-background));
+  /* Repainting the page background is the one transition worth animating on a
+     theme switch: without it the flip from near-white to near-black is a hard
+     cut across the whole viewport. Everything else (text, borders, the glass
+     panes) follows within the same frame and needs no help. */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+}
+
+/* ---- The header brand: gradient text needs a line box that holds the tails ----
+   #nav-brand is GRADIENT TEXT - `bg-clip-text` with `text-transparent`. That pair
+   has a failure mode plain text does not: the gradient only paints inside the
+   element's own box, so any part of a glyph falling OUTSIDE the line box has no
+   background behind it and, the colour being transparent, renders as nothing.
+   Not clipped - invisible.
+   `text-display-lg` asks for 48px on a 56px line box (ratio 1.1667), and 56px
+   was too short even for the PREVIOUS body family, Plus Jakarta Sans: its
+   ascent (1.038em) and descender (0.220em) sum past 1.1667, so the tail of the
+   `y` in "AnonyHT" rendered outside the line box - invisible, not clipped,
+   because the gradient has nothing to paint against out there. Its own
+   predecessor, Be Vietnam Pro (ascent 1.000em, descender 0.195em, sum 1.195),
+   fit inside 1.1667 by one pixel of luck rather than by margin.
+   1.35 is the smallest round ratio that comfortably contains the descender at
+   BOTH sizes (48px -> 64.8px, 32px -> 43.2px) for every family this brand has
+   worn, Inter included (ascent 0.969em + descender 0.241em = 1.210em, the
+   smallest sum of the three - 1.35 now clears it with room to spare rather
+   than by the minimum). It grows the box symmetrically about the same centre,
+   so the baseline lands exactly where it already was - 51.58px below the top
+   of the 64px header at md+, 45.06px below it on a phone; those two numbers
+   depend on the ratio and the font-size alone, not on which family is loaded,
+   so swapping fonts again never needs to touch them. An id beats the
+   `.text-display-*` utilities (0,1,0) on specificity, so this holds even
+   though common.css is linked BEFORE tailwind.css.
+
+   ---- the same metrics also leave the logotype sitting low in the bar ----
+   The header row centres the brand with `items-center`, and that centres its
+   LINE BOX, not its ink. Inside the box the glyphs are placed by the font's own
+   ascent, which sits above its cap height by however much room the family
+   reserves for Vietnamese stacked marks - so the visible logotype hangs below
+   the middle of the bar regardless of family, only by a different amount each
+   time one is swapped in.
+   This half CANNOT be fixed with line-height - the offset is independent of it,
+   because raising the line box moves the ink with it. It is pure font metrics
+   plus the shape of the text:
+
+     offset(em) = (ascent - |descent|) / 2 + (inkBelow - inkAbove) / 2
+
+   Inter's own numbers (read from the woff2 itself - ascent 0.96875em, descent
+   0.2412em; "AnonyHT" ink 0.7275em of cap above the baseline, 0.2080em of `y`
+   below it):
+
+     offset = (0.96875 - 0.2412) / 2 + (0.2080 - 0.7275) / 2
+            = 0.36378 - 0.25975 = 0.1040em below the line-box centre
+
+   hence translateY(-0.1040em). In `em` and not px because the brand is 48px at
+   md+ and 32px below it, and one declaration has to serve both: that is -4.99px
+   and -3.33px, and each makes the gaps equal above and below the ink.
+   The SECOND term is the one that depends on the text, and the brand name is
+   not fixed - server/render-html.js fills `data-brand-name` from
+   settings.brand_name, so an admin can rename the site. The 0.7275 / 0.2080
+   pair is the ink of "AnonyHT" in Inter specifically: cap height above the
+   baseline, one `y` below it. A name with no descender would want a smaller
+   second term, an all-lowercase one more. If the default brand OR the font
+   ever changes again, recompute both terms - the woff2 file itself is the
+   source of truth for the first, not a spec sheet or a past measurement of a
+   different family. */
+#nav-brand {
+  line-height: 1.35;
+  transform: translateY(-0.104em);
+}
+
+/* The elements that do NOT inherit a font on their own: form controls take the
+   OS UI font, and <select> options are a separate box again. Listed explicitly
+   rather than with `*` so the Material Symbols class - and the deliberate
+   monospace on code/pre and the editor's "Máy đánh chữ" option - keep theirs. */
+button,
+input,
+optgroup,
+option,
+select,
+textarea {
+  font-family: inherit;
+}
+/* The icon font's family, plus the properties a LIGATURE icon needs in order to
+   survive inherited text styling. Both halves used to arrive together: the CDN
+   <link> that public/css/fonts.css replaced served the @font-face AND this class
+   rule. Self-hosting kept only the @font-face, so every icon span inherited
+   --font-vi-sans instead, and the body font rendered the ligature NAME as
+   words - "person Trang ca nhan", "post_add Viet bai moi".
+   It lives here and not in fonts.css because that file is regenerated wholesale
+   by scripts/fetch-fonts.py and a hand-added rule there would not survive.
+   Three of these are load-bearing rather than boilerplate:
+     letter-spacing  .text-label-md inherits 0.05em onto the span, and a run with
+                     tracking applied stops forming ligatures;
+     text-transform  the subset carries no uppercase glyphs, so `uppercase` on a
+                     parent (admin.html's Entra heading) leaves the name
+                     unrenderable and it falls back to text again;
+     font-size       58 spans carry no size utility at all and were drawn against
+       + line-height the 24px/1 the CDN rule gave them.
+   tailwind.css is linked after this file, so text-[18px] and friends still win
+   for the spans that do ask for a size. */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+.ambient-shadow { box-shadow: var(--shadow-ambient); }
+.outline-subtle { border: 1px solid var(--c-glass-border); }
+.chip { background-color: rgb(var(--c-electric-indigo) / 0.1); color: rgb(var(--c-primary)); }
+
+/* ==========================================================================
+   Touch targets
+   The desktop design uses compact 32px pills; on a phone those are below the
+   ~44px both Apple and Material ask for, and the audit found ~40 of them across
+   the pages. Rather than resize every button (which would change the desktop
+   proportions the design specifies), the same pill grows only below the lg
+   breakpoint, where the pointer is a finger.
+   ========================================================================== */
+@media (max-width: 1023px) {
+  .tap-target {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+  }
+  /* Icon-only actions (share, copy link, row edit/delete) are square. */
+  .tap-target--icon {
+    min-width: 44px;
+  }
+}
+
+/* ==========================================================================
+   Side rail (the nav card on profile.html and admin.html)
+   The rail is vertical at every width: one stacked row per link, with the 4px
+   active accent on the left edge. Below lg the main is a column, so the aside
+   is a full-width row of it and the stacked rail gets the whole viewport width
+   there - every label fits on one line, and the rows simply sit above the
+   content instead of beside it.
+   An earlier revision collapsed the rail into a horizontal swipeable tab row
+   below lg. It saved vertical space but pushed rows off-screen (and hid the
+   separators and the signed-in identity block), so both pages now stack.
+   ========================================================================== */
+
+/* ---- The rail BOX: one card, in one place, on both pages ----
+   Each page used to carry its own numbers for this. profile.html capped the
+   height at calc(100vh - 104px) in Tailwind utilities on the aside and put the
+   inner scroll on the CARD; admin.html capped at calc(100vh - 11rem) in a
+   hand-written .admin-rail and put the scroll on the ASIDE. So the same card
+   sat in two different places - at 1440x700 profile's bottom edge measured 684
+   and admin's 612, 72px apart - and following the rail's own "Bảng quản trị" /
+   "Trang cá nhân" link between the two pages visibly resized it.
+   Their widths diverged too, from lg to 1279: profile sized the rail as 3 of 12
+   grid columns (226px at 1024) while admin sized it as a flex basis with a 15rem
+   floor (240px). The two only agreed from 1280 up, where both reach 290px.
+   Both pages now read ONE rule below, and both mains are the same flex row, so
+   the card has no way to drift between them again.
+
+   top: 88px is the offset write.html's rail and right-hand column use, so all
+   three pages pin their shelves at the same height under the same fixed 4rem
+   nav. The cap hands the rail that same 88px of air BELOW it (11rem = 88 + 88)
+   instead of running to 16px from the viewport edge, and the rail then scrolls
+   inside itself rather than dragging its sticky box past the bottom of the
+   screen - a sticky rail taller than the viewport pins its top and pushes
+   whatever hangs below the fold permanently out of reach.
+   overscroll-behavior stops that inner scroll from chaining into the page once
+   it reaches either end.
+
+   The width is a clamp rather than one fixed value per breakpoint: 23.5% of the
+   container's inner width tracks the canvas and lands on 18.125rem (290px)
+   exactly where the max-w-7xl cap starts to bind, and the 15rem floor is what
+   keeps admin's longest label, "Quản lí trang chủ", on one line down to lg
+   (profile's longest, "Chỉnh sửa hồ sơ", is shorter, so the floor covers both).
+   A clamp is a constant, which is the point: the card holds the same width and
+   the same place on screen whichever tab or panel is open. The per-tab
+   .is-media-wide widening that used to break this - it re-spanned the rail on
+   the Thư viện tab and slid the card ~128px left, then slid it back on leaving -
+   is gone, and so is the class. */
+.side-rail-aside,
+.side-rail-content {
+  width: 100%;
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .side-rail-aside {
+    position: sticky;
+    top: 88px;
+    flex: 0 0 clamp(15rem, 23.5%, 18.125rem);
+    width: auto;
+    max-height: calc(100vh - 11rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* The content column takes whatever the rail leaves. Basis 0 rather than
+     auto: a panel's min-content - admin's users table at its narrowest, a long
+     grid of thumbnails - would otherwise set the row's width instead of the
+     available one, and push the rail off the edge. The min-w-0 on the markup is
+     the same belt. */
+  .side-rail-content {
+    flex: 1 1 0;
+    width: auto;
+  }
+}
+
+.side-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* Nested groups (profile's owner-only buttons) stack like the rest. */
+.side-rail > .side-rail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ---- Medium 500 for the account's own surfaces --------------------------------
+   Two places speak as the signed-in person rather than as the article: the card
+   that unfolds from the avatar button, and everything "Trang cá nhân" shows about
+   them - the identity header, the panel headings, the rail labels, their post
+   rows. Both read at Regular 400 before, which put the account's own name a step
+   lighter than the body copy it sits beside (the article body is 500 now), so
+   these two surfaces join it. Sizes are untouched: weight only.
+   Inheritance does the work - no per-row class soup - with two carve-outs: text
+   the person TYPES stays Regular (an input's content is their voice, not the
+   page's), and the rail's active row keeps the 600 its own rule gives it, because
+   active-vs-rest is a distinction weight already carries there. */
+#user-dropdown-menu,
+#profile-main {
+  font-weight: 500;
+}
+#profile-main input,
+#profile-main textarea {
+  font-weight: 400;
+}
+
+/* ---- Medium 500 for the homepage's own copy -------------------------------------
+   The homepage's body lines still read at Regular 400 after the article body and
+   the account surfaces above had moved to Medium 500, which put the lead card's
+   excerpt a visible step lighter than the same sentence one click later inside the
+   post. Sizes are untouched: weight only.
+   Two halves, because the weight reaches these lines two ways. Most of the page's
+   text inherits it - the loading and error notices, the lead card's author and
+   date, the side cards' dates, the empty state - so the container rule lifts them.
+   The rest carry a type-scale utility, and .text-body-sm/-md/-lg each declare
+   font-weight: 400 ON THE ELEMENT, which beats anything inherited; those need the
+   explicit override. ID + class outranks the utility, and does so regardless of
+   stylesheet order (tailwind.css is linked second).
+   Nothing here fights the weight utilities: no element on the page mixes
+   text-body-* with .font-bold or .font-semibold, and the headings, chips, badge and
+   buttons carry 600/700 of their own, which an inherited 500 cannot touch. The two
+   search fields live in the nav and the mobile overlay, outside this container, so
+   typed text stays Regular with no carve-out needed. */
+#home-main {
+  font-weight: 500;
+}
+#home-main .text-body-sm,
+#home-main .text-body-md,
+#home-main .text-body-lg {
+  font-weight: 500;
+}
+
+.side-nav-item {
+  border-left: 4px solid transparent;
+  border-radius: 0;
+  border-top-right-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+}
+.side-nav-item.active {
+  border-left-color: rgb(var(--c-primary));
+  background-color: rgb(var(--c-electric-indigo) / 0.1);
+  color: rgb(var(--c-primary));
+  font-weight: 600;
+}
+
+/* Frosted-glass card/panel used throughout the redesign */
+.glass-panel, .glass-card {
+  background: var(--c-glass-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--c-glass-border);
+  box-shadow: var(--shadow-ambient);
+}
+
+.prose-content p { margin-bottom: 1.5rem; line-height: 1.7; font-size: 1.125rem; }
+/* Body copy weight: 500, matching .ed-standfirst's own weight (editorial.css)
+   - a reader flagged the body reading inconsistent against the excerpt right
+   above it, and pasted text (which used to land in the untouched-paragraph
+   serif default just below) made the mismatch worse, not just the weight.
+   Bold stays exactly the strong/b rule below, 700, regardless of which
+   weight the body itself sits at - that contrast is the whole point of a
+   lighter-than-bold body in the first place. */
+.prose-content p,
+.rt-editor p { font-weight: 500; }
+.prose-content h2, .prose-content h3 { margin-top: 2rem; margin-bottom: 1rem; }
+
+/* Rich-text paragraph blocks - the contenteditable output from the post editor.
+   Every rule is shared with .rt-editor, the editor the text was typed into, so
+   the two cannot drift: they had drifted, and that was the whole reason the
+   "Co chu" dropdown appeared not to work. The editor inherited the 16px body
+   size while the reading page sets 1.2rem here, so "Vua" - which execCommand
+   emitted as <font size="3">, a fixed 16px - was invisible in the editor (it
+   already WAS 16px) and came out SMALLER than the surrounding paragraph once
+   published. The sizes are now `em` classes (below) against this one base, and
+   this base is now the same number in both places, so a run set to "Vua" is the
+   same size as the copy around it in the editor and on the page.
+   Only the block's own bottom margin stays reading-page-only - inside the
+   editor that would be a gap under the caret. */
+.rich-text-block { margin-bottom: 1.5rem; }
+/* A text block's own default typeface is now the site's UI sans (Inter, via
+   --font-vi-sans - the same token .rt-font-sans itself resolves through, so
+   this follows the body font automatically if that token is ever changed
+   again), matching .ed-standfirst (editorial.css) - a reader flagged the
+   article body reading as a different, inconsistent typeface from the
+   excerpt line right above it. This USED to be serif by default (Newsreader),
+   which is also what made a paste from Word/Docs default to a serif look:
+   nothing an author typed or pasted without an explicit font choice ever
+   overrode this ancestor rule. An author who explicitly picks "Nét thanh"
+   (Newsreader) or "Máy đánh chữ" still overrides this via .rt-font-serif/
+   .rt-font-mono on the run itself, which wins over this ancestor rule
+   regardless of specificity - only the untouched-by-default case changed. */
+.rich-text-block,
+.rt-editor {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  font-family: var(--font-vi-sans);
+}
+.rich-text-block p,
+.rt-editor p { margin-bottom: 1rem; }
+.rich-text-block ol,
+.rt-editor ol { list-style: decimal; padding-left: 1.75rem; margin: 1rem 0; }
+.rich-text-block ul,
+.rt-editor ul { list-style: disc; padding-left: 1.75rem; margin: 1rem 0; }
+/* Items sit at the paragraph's own leading and nothing more. The 0.5rem this had
+   was 8px ON TOP of the 1.7 line-height that lists and paragraphs alike inherit
+   from the base two rules up, so a bulleted or numbered list ran visibly looser
+   than the prose either side of it: the same sentence broken into three items
+   took more vertical room than the sentence did. The marker is what separates one
+   item from the next - the spacing does not have to do it a second time.
+   Written as an explicit 0 rather than deleted, because it is a decision and an
+   absent rule is an invitation to put the margin back. */
+.rich-text-block li,
+.rt-editor li { margin-bottom: 0; }
+/* Tables - what the editor's "Bảng" picker inserts and what a paste from Word or
+   a spreadsheet brings. Shared like every other block rule here, so a table
+   looks the same while it is being edited and once published. Hairline borders
+   in the outline token and the head row one container step up: both follow the
+   one .dark class, like everything else on this sheet. No text-align on the
+   cells, so a block the author centred centres its table's copy too. */
+.rich-text-block table,
+.rt-editor table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+}
+.rich-text-block td,
+.rich-text-block th,
+.rt-editor td,
+.rt-editor th {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.6);
+  vertical-align: top;
+}
+.rich-text-block th,
+.rt-editor th {
+  background: rgb(var(--c-surface-container) / 0.6);
+  font-weight: 600;
+}
+/* Border and vertical-align, set per table/cell from the "Bảng" picker's edit
+   menu in js/write.js (RT_TABLE_OPS) - Word/Excel's own border and cell-align
+   controls. Both are CLASSES, not an inline border-color/background-color: this
+   file's dark theme is one `.dark` class re-pointing --c-* tokens, and an
+   inline colour would out-rank every one of them (the same reasoning
+   server/sanitize-html.js's STYLE_PROPS comment gives for refusing a colour
+   property from a paste). "All borders" and "top" need no class - they are
+   already what the plain .rt-editor table/td rules above draw - so only the
+   two other states of each group are here to override them. */
+.rich-text-block table.rt-tbl-border-outer,
+.rt-editor table.rt-tbl-border-outer {
+  border: 1px solid rgb(var(--c-outline-variant) / 0.6);
+}
+.rich-text-block table.rt-tbl-border-outer td,
+.rich-text-block table.rt-tbl-border-outer th,
+.rt-editor table.rt-tbl-border-outer td,
+.rt-editor table.rt-tbl-border-outer th {
+  border: none;
+}
+.rich-text-block table.rt-tbl-border-none td,
+.rich-text-block table.rt-tbl-border-none th,
+.rt-editor table.rt-tbl-border-none td,
+.rt-editor table.rt-tbl-border-none th {
+  border: none;
+}
+.rich-text-block td.rt-valign-middle,
+.rich-text-block th.rt-valign-middle,
+.rt-editor td.rt-valign-middle,
+.rt-editor th.rt-valign-middle {
+  vertical-align: middle;
+}
+.rich-text-block td.rt-valign-bottom,
+.rich-text-block th.rt-valign-bottom,
+.rt-editor td.rt-valign-bottom,
+.rt-editor th.rt-valign-bottom {
+  vertical-align: bottom;
+}
+.rich-text-block caption,
+.rt-editor caption {
+  padding: 0.375rem 0.25rem;
+  font-size: 0.875em;
+  color: rgb(var(--c-on-surface-variant));
+}
+.rich-text-block b, .rich-text-block strong,
+.rt-editor b, .rt-editor strong { font-weight: 700; }
+.rich-text-block i, .rich-text-block em,
+.rt-editor i, .rt-editor em { font-style: italic; }
+.rich-text-block u,
+.rt-editor u { text-decoration: underline; }
+/* Hyperlinks written by the editor's link button (or a paste). Same treatment in
+   the editor and on the reading page - a link must read as a link in both, and
+   the colour is a token so the dark theme gets its own legible one. Long URLs
+   wrap instead of pushing the line out of the measure. */
+.rich-text-block a,
+.rt-editor a,
+.prose-content a {
+  color: rgb(var(--c-electric-indigo));
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+  overflow-wrap: anywhere;
+}
+.rich-text-block a:hover,
+.rt-editor a:hover,
+.prose-content a:hover { color: rgb(var(--c-primary)); }
+/* Strikethrough. Spelled out rather than left to the browser default for the
+   same reason <u> above is: Tailwind's Preflight resets nothing here, but the
+   engines disagree about which element execCommand emits - <strike> in older
+   WebKit, <s> everywhere current - and <del> arrives with a paste. All three
+   mean the same thing on the page. */
+.rich-text-block s, .rich-text-block strike, .rich-text-block del,
+.rt-editor s, .rt-editor strike, .rt-editor del { text-decoration: line-through; }
+
+/* ---- The marks the toolbar emits ----------------------------------------
+   execCommand has no vocabulary of its own: 'fontSize' writes <font size="5">
+   and 'fontName' writes <font face="Georgia, serif"> - a deprecated element
+   carrying values that answer to nothing in this design system. <font size> in
+   particular is an ABSOLUTE step off the browser's default (2=13px, 3=16px,
+   5=24px, 7=48px), so it ignored the 1rem base above entirely: a run marked
+   "Rat lon" stayed a fixed 48px regardless of the reading width around it.
+   js/api.js rewrites all of it into these classes on save and on render
+   (upgradeRichTextMarks), which is also how a post written before this change
+   gets the new behaviour with no migration. The EDITOR deliberately keeps the
+   <font> while the text is being edited - it is the only markup execCommand can
+   replace rather than nest inside - and restyles <font size> to these same
+   ratios in the <style> block of public/write.html, so what the author sees is
+   what the reading page paints. Only the highlight is converted at press time
+   (markInlineHighlights), because a highlight cannot compound.
+   The sizes are `em`, so they scale WITH the paragraph: one ratio, correct at
+   both the desktop and the phone base. api.js strips the class from any
+   descendant of an element that already carries one, so two overlapping
+   applications cannot multiply into 1.35 x 1.35. */
+.rt-size-sm { font-size: 0.85em; }
+.rt-size-md { font-size: 1em; }
+.rt-size-lg { font-size: 1.35em; }
+.rt-size-xl { font-size: 1.75em; }
+
+/* "Mac dinh" resolves through the site's own font variable rather than naming
+   the body family, so it keeps following the token if the body font is ever
+   changed - and so it really is a RESET rather than a third pinned family. */
+.rt-font-sans { font-family: var(--font-vi-sans); }
+/* Serif/mono used to be plain Georgia / Courier New - system fonts, not the
+   site's own faces. The reading page already has a serif and a mono
+   identity of its own (.ed-serif's Newsreader, .ed-hashtag/.ed-mono's
+   JetBrains Mono in editorial.css) - "Nét thanh" and "Máy đánh chữ" in the
+   editor's own Font chữ menu now name those, so text set to either one
+   looks the same typed as published, in the site's own type instead of a
+   generic system serif/monospace. Georgia/Courier New stay as the fallback
+   for a reader whose device has not fetched the webfont yet. */
+.rt-font-serif { font-family: 'Newsreader', Georgia, 'Times New Roman', 'Noto Serif', serif; }
+.rt-font-mono { font-family: 'JetBrains Mono', 'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* Highlight. execCommand('hiliteColor') writes the colour it is handed straight
+   into a style attribute, so the toolbar's literal #fef08a survived into the
+   dark theme and put pale yellow behind near-white ink - the one formatting
+   button that made its own text unreadable. Both halves are tokens now (see
+   --c-rt-mark in the theme block at the top of this file): the dark theme moves
+   to a saturated amber and, because a highlight is a BACKGROUND, pins its own
+   ink colour so the run stays legible whatever the surrounding text colour is.
+   The inline padding is what makes a highlighted phrase read as marked rather
+   than as a coloured rectangle butted against the words either side. */
+.rt-mark {
+  background-color: rgb(var(--c-rt-mark));
+  color: rgb(var(--c-rt-mark-ink));
+  padding: 0.05em 0.15em;
+  margin: 0 -0.05em;
+  border-radius: 0.2em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ---- Paragraph formatting: the Word-like controls ----------------------------
+   Alignment, first-line indent, leading and paragraph spacing are properties of
+   a PARAGRAPH, not of a run of characters, so unlike the marks above they are
+   set on the block element the caret sits in - js/write.js runs
+   execCommand('formatBlock', 'p') first when the selection is loose text
+   directly inside the editor, so there is always a block to carry the class.
+   All four groups are CLASSES rather than inline styles for one reason:
+   normalizeInheritedTypography() strips inline `line-height` from every element
+   on save (a paste from Google Docs arrives with `line-height: 1.15 !important`
+   and would otherwise fight the article's own leading), so a leading chosen in
+   this editor had to live somewhere that pass does not touch.
+   Every selector is scoped to the two containers, which is not decoration: the
+   reading page sets `.prose-content p { line-height: 1.7 }` at 0,1,1 - a
+   bare `.rt-lh-loose` at 0,1,0 would lose to it and the author's choice would
+   silently do nothing on the published page. */
+.rich-text-block .rt-align-left,
+.rt-editor .rt-align-left { text-align: left; }
+.rich-text-block .rt-align-center,
+.rt-editor .rt-align-center { text-align: center; }
+.rich-text-block .rt-align-right,
+.rt-editor .rt-align-right { text-align: right; }
+/* Justified Vietnamese sets badly without hyphenation - the language has no
+   hyphenation dictionary in any engine, so a long word leaves a river of white
+   space. `text-wrap: pretty` is what keeps the last lines even where supported,
+   and it degrades to normal wrapping everywhere else. */
+.rich-text-block .rt-align-justify,
+.rt-editor .rt-align-justify { text-align: justify; text-wrap: pretty; }
+
+/* "Lùi dòng đầu tiên": the indent Vietnamese prose actually uses - the FIRST
+   line of the paragraph steps in and the rest stays on the measure. Distinct
+   from .rt-indent above, which shifts the whole block; execCommand has no
+   command for this one at all, so the toolbar sets the class itself.
+   1.5em rather than a rem: it is a measure of the type it indents, so it keeps
+   its proportion at the phone's smaller base. */
+.rich-text-block .rt-first-line,
+.rt-editor .rt-first-line { text-indent: 1.5em; }
+
+/* Leading. .rt-lh-normal is the same 1.7 the block already inherits and exists
+   so "Bình thường" can be picked back off one of the others rather than only by
+   Xoá định dạng. */
+.rich-text-block .rt-lh-tight,
+.rt-editor .rt-lh-tight { line-height: 1.35; }
+.rich-text-block .rt-lh-snug,
+.rt-editor .rt-lh-snug { line-height: 1.6; }
+.rich-text-block .rt-lh-normal,
+.rt-editor .rt-lh-normal { line-height: 1.7; }
+.rich-text-block .rt-lh-relaxed,
+.rt-editor .rt-lh-relaxed { line-height: 2.15; }
+.rich-text-block .rt-lh-loose,
+.rt-editor .rt-lh-loose { line-height: 2.5; }
+
+/* Space before/after a paragraph. -md restates the 1rem a <p> already gets from
+   the rule above so the group has a middle to return to; the others move away
+   from it in both directions. Only margin-block, so nothing here can pull a
+   paragraph out of the column. */
+.rich-text-block .rt-space-none,
+.rt-editor .rt-space-none { margin-top: 0; margin-bottom: 0; }
+.rich-text-block .rt-space-sm,
+.rt-editor .rt-space-sm { margin-top: 0; margin-bottom: 0.5rem; }
+.rich-text-block .rt-space-md,
+.rt-editor .rt-space-md { margin-top: 0; margin-bottom: 1rem; }
+.rich-text-block .rt-space-lg,
+.rt-editor .rt-space-lg { margin-top: 0.75rem; margin-bottom: 1.5rem; }
+
+/* Indented paragraphs - the editor's "lùi dòng" button.
+   execCommand('indent') has no element of its own, so every engine implements
+   it by wrapping the selection in
+     <blockquote style="margin: 0 0 0 40px; border: none; padding: 0px;">
+   and .prose-content blockquote below is how this site sets a QUOTATION:
+   italic, a half-step down in size, and a pair of marks hanging off its first
+   and last child. An indented step in a how-to was therefore set in someone
+   else's voice - quoted, emphasised, spoken by nobody - which is the confusion
+   this class exists to remove. js/api.js rewrites those wrappers to
+   <div class="rt-indent"> on save and on render, and this is all an indent is:
+   the same 40px shift, inheriting every other property from the paragraph
+   around it. A blockquote the author really wrote keeps the marks.
+   The attribute selectors are a belt-and-braces fallback for markup that
+   reaches the page without passing through normalizeRichTextHtml(). */
+.rich-text-block .rt-indent,
+.rt-editor .rt-indent,
+.prose-content blockquote.webkit-indent-blockquote:not(.rt-quote),
+.prose-content blockquote[style*="border: none"]:not(.rt-quote),
+.prose-content blockquote[style*="border:none"]:not(.rt-quote) {
+  margin: 0 0 0 2.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  font-style: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* ---- Images INSIDE a paragraph ---------------------------------------------
+   An <img> the editor put into the middle of a paragraph block - a pasted
+   screenshot, or one dropped at the caret by the toolbar's "Chèn ảnh" - as
+   distinct from the <figure> an image BLOCK renders, which
+   renderContentBlocksHtml() in js/api.js builds OUTSIDE .rich-text-block and
+   sizes with its own utilities.
+   The cap is on every img in here, not only on the ones this editor writes: a
+   paste from a web page brings <img> tags of its own, and one wider than the
+   measure pushes the paragraph out of the column - post.html's <body> is
+   overflow-x-hidden, so the reader would simply lose the right-hand edge of the
+   article. height:auto rides along so a cap on one axis never squashes the
+   picture; a replaced element keeps its ratio when only one side is bounded.
+   inline-block rather than block, and that is the whole point of the feature:
+   the image belongs wherever the caret was, which includes between two words of
+   a sentence. It also means the paragraph's own text-align moves the picture, so
+   the alignment buttons already in the toolbar centre or right-align an image
+   with nothing extra written for it. An image this wide fills its line anyway,
+   so a picture on its own line looks the same as a block one would.
+   Border and radius are the house treatment of .rt-image-preview in
+   write.html - a white screenshot on the light theme needs the edge to be a
+   picture rather than a hole in the page. Both halves are tokens, so the dark
+   theme gets its own. */
+.rich-text-block img,
+.rt-editor img {
+  max-width: 100%;
+  height: auto;
+}
+.rich-text-block img.rt-inline-img,
+.rt-editor img.rt-inline-img {
+  display: inline-block;
+  vertical-align: middle;
+  max-height: 26rem;
+  margin: 0.375rem 0.125rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--c-outline-variant) / 0.5);
+}
+/* Centred or right-aligned by the paragraph, which is where the alignment
+   classes live: an inline-block obeys text-align, but its own auto margins have
+   to be released first or the two fight over which side it sits on. */
+.rich-text-block .rt-align-center img.rt-inline-img,
+.rt-editor .rt-align-center img.rt-inline-img { margin-left: auto; margin-right: auto; }
+.rich-text-block .rt-align-right img.rt-inline-img,
+.rt-editor .rt-align-right img.rt-inline-img { margin-left: auto; margin-right: 0; }
+
+/* ---- Explicit widths for a picture inside a paragraph -----------------------
+   The editor's image panel (.rt-img-panel in public/write.html, driven by
+   public/js/write.js) writes exactly ONE of these onto an
+   <img class="rt-inline-img"> and nothing else - no style attribute, no width
+   attribute.
+   A CLASS because server/sanitize-html.js admits `style` only for the
+   declarations in its STYLE_PROPS allowlist, and `width` is not one of them: an
+   inline width would be stripped on save and the picture would come back at its
+   natural size on the reading page, so the author's choice would survive the
+   editor and not the post. CLASS_RE there admits any rt-* name, so a class
+   survives - and because this file is the one stylesheet the editor and the
+   reading page both load, the same class means the same picture in both.
+   PERCENTAGES rather than pixels for the same reason twice over: the article is
+   written on the 52rem .rt-prose caps in write.html and read on the 832px
+   post.html arrives at from max-w-4xl, so 50% is the same width of picture
+   either side of the save, and on a phone it is still half the measure instead
+   of a fixed 400px hanging off the edge.
+   The ratio is held by `height: auto` in the shared rule above - only the width
+   is ever set, so the height is whatever the picture's own proportions make it.
+   max-height is released here because .rt-inline-img's 26rem would clamp the
+   HEIGHT of a tall picture taken to 100% width while leaving the width where it
+   was, which is a squashed picture: the one thing "giữ đúng tỉ lệ" must not
+   produce. Releasing it is safe - 26rem is a cap on a picture at its natural
+   size, and a picture whose width the author chose has a height they chose with
+   it.
+   Five percent steps from 10 to 100: finite, so the sanitizer's rt-* allowance
+   covers the whole set by name, and fine enough that dragging the panel's handle
+   does not visibly jump (5% of the 832px measure is ~42px).
+   margin-inline is zeroed because .rt-inline-img carries 0.125rem of air either
+   side, and air OUTSIDE a width is overflow: at width:100% those two margins make
+   the picture 4px wider than the paragraph it is in, which on the reading page is
+   a horizontal scrollbar for the whole article. The vertical margin stays - that
+   one is the gap between the picture and the line it sits on. The alignment rules
+   above are more specific, so an author who asked for centred or right-aligned
+   still gets their auto margins back. */
+.rich-text-block img.rt-img-10,
+.rt-editor img.rt-img-10 { width: 10%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-15,
+.rt-editor img.rt-img-15 { width: 15%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-20,
+.rt-editor img.rt-img-20 { width: 20%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-25,
+.rt-editor img.rt-img-25 { width: 25%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-30,
+.rt-editor img.rt-img-30 { width: 30%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-35,
+.rt-editor img.rt-img-35 { width: 35%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-40,
+.rt-editor img.rt-img-40 { width: 40%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-45,
+.rt-editor img.rt-img-45 { width: 45%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-50,
+.rt-editor img.rt-img-50 { width: 50%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-55,
+.rt-editor img.rt-img-55 { width: 55%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-60,
+.rt-editor img.rt-img-60 { width: 60%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-65,
+.rt-editor img.rt-img-65 { width: 65%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-70,
+.rt-editor img.rt-img-70 { width: 70%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-75,
+.rt-editor img.rt-img-75 { width: 75%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-80,
+.rt-editor img.rt-img-80 { width: 80%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-85,
+.rt-editor img.rt-img-85 { width: 85%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-90,
+.rt-editor img.rt-img-90 { width: 90%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-95,
+.rt-editor img.rt-img-95 { width: 95%; max-height: none; margin-inline: 0; }
+.rich-text-block img.rt-img-100,
+.rt-editor img.rt-img-100 { width: 100%; max-height: none; margin-inline: 0; }
+
+/* The editor's own chrome. Its list/typography rules are shared with
+   .rich-text-block above rather than restated here.
+   :empty is not enough for the placeholder: the moment a browser puts a stray
+   <br> in an emptied contenteditable the element stops being :empty and the
+   hint disappears for good, so js/write.js also toggles .is-empty from the
+   input event. */
+.rt-editor:empty:before,
+.rt-editor.is-empty:before {
+  content: attr(data-placeholder);
+  color: rgb(var(--c-outline));
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+/* The excerpt field (write.html) - same placeholder trick as .rt-editor
+   above (deliberately not that class itself; see the comment on the field's
+   own markup for why), sized to read as a short field rather than a full
+   editor block. */
+.rt-excerpt-editor {
+  min-height: 4.5rem;
+  outline: none;
+}
+.rt-excerpt-editor:empty:before,
+.rt-excerpt-editor.is-empty:before {
+  content: attr(data-placeholder);
+  color: rgb(var(--c-outline));
+  pointer-events: none;
+}
+
+/* Scroll reveal animation for post cards on the homepage */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-on-scroll.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll { opacity: 1; transform: none; transition: none; }
+}
+
+/* ---- The lead article's scrim (homepage) ------------------------------------
+   The big card in "Bài viết mới nhất" is the only place on the site where a
+   photograph sits UNDER text, and that photograph is whatever cover the author
+   uploaded: a white screenshot loses white type just as surely as a dark one
+   loses black. The old single gradient - black/80 at the bottom edge, black/20
+   at the middle - had already faded to almost nothing by the headline line, so
+   the title and the excerpt floated on raw cover pixels.
+   Two achromatic layers of pure black instead. Black because the scrim has to
+   hold over ANY hue a cover happens to be, and black is the one colour that
+   never fights one: it only takes lightness away from under the type. The
+   vertical layer keeps the whole lower half of the card at or above ~0.6 alpha
+   by putting a stop every ~20% instead of trusting one midpoint, and the
+   horizontal layer adds a second pass behind the left three quarters - where
+   the copy column actually is - fading out before the right edge so the photo
+   still reads as a photo above and beside the text.
+   The black is literal on purpose. This is a shadow cast over a photograph,
+   not a theme colour: .dark must not re-point it, or dark mode would wash the
+   type out a second time. */
+.lead-scrim {
+  background:
+    linear-gradient(to right,
+      rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.30) 45%, rgb(0 0 0 / 0) 78%),
+    linear-gradient(to top,
+      rgb(0 0 0 / 0.94), rgb(0 0 0 / 0.86) 22%, rgb(0 0 0 / 0.62) 46%,
+      rgb(0 0 0 / 0.28) 68%, rgb(0 0 0 / 0) 88%);
+}
+/* A last line of defence for covers with a hard bright edge running THROUGH
+   the copy: a soft shadow the eye reads as part of the letters themselves. */
+.lead-copy h3,
+.lead-copy p,
+.lead-copy > div span {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 0 16px rgb(0 0 0 / 0.35);
+}
+
+/* How a quotation is set: a frame of two thin lines that do not quite meet, with
+   the two big marks sitting in the gaps. The first line runs across the top and
+   down the right but stops short of the bottom; the second runs across the
+   bottom and up the left but stops short of the top; and where each line would
+   have closed its corner, a quotation mark three times the size of the type sits
+   instead. The frame therefore never reads as a box drawn around the words - it
+   reads as two strokes the marks interrupted, which is the difference between a
+   container and a composition. It is also the opposite of the frosted panel this
+   used to be: no fill, no blur, no shadow, no thick coloured rule, just hairlines
+   in the page's own ink at less than half strength.
+
+   The padding is what gives the marks somewhere to sit: they live in it, at the
+   two open corners, clear of the first and last words.
+
+   The second selector is the SAME treatment inside the editor, scoped to
+   .rt-quote rather than to every blockquote in there on purpose: while a
+   paragraph is being edited, "lùi cả đoạn" is also a <blockquote> - it is the
+   only element execCommand('indent') can write - and setting that as a
+   quotation is exactly the mistake .rt-indent above exists to prevent. Sharing
+   one rule rather than copying the declarations is the same anti-drift move the
+   .rich-text-block / .rt-editor pairs make: the author sees what the reader is
+   going to get, because it IS the reader's rule. */
+.prose-content blockquote,
+.rt-editor blockquote.rt-quote {
+  position: relative;
+  margin: 2.5rem 0;
+  padding: 1.5rem 1.75rem;
+  font-style: italic;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  /* Stays Regular while the body copy around it is Medium: the italic already
+     adds apparent weight, and a quotation set heavier than its own page's body
+     would out-shout the sentences it quotes. Declared after the body rule so
+     it wins the cascade for the paragraphs inside the panel. */
+  font-weight: 400;
+  color: rgb(var(--c-on-surface));
+}
+
+/* The two halves of the frame. Each is one absolutely-positioned pseudo-element
+   carrying two of the four sides, sized 60% of the block so its vertical stroke
+   stops well short of the far corner - that shortfall is the gap the mark on the
+   opposite diagonal sits in. `left`/`right` hold the horizontal strokes back from
+   the two marked corners by a little more than a mark is wide. The radius is on
+   the two corners that DO close, top-right and bottom-left, because a hairline
+   turning a sharp 90 degrees reads as a spreadsheet grid while a soft turn reads
+   as drawn. */
+.prose-content blockquote.rt-quote::before,
+.prose-content blockquote:not([style*="border: none"]):not([style*="border:none"]):not(.webkit-indent-blockquote)::before,
+.rt-editor blockquote.rt-quote::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 2em;
+  height: 60%;
+  border-top: 1px solid rgb(var(--c-on-surface) / 0.45);
+  border-right: 1px solid rgb(var(--c-on-surface) / 0.45);
+  border-top-right-radius: 0.5rem;
+}
+.prose-content blockquote.rt-quote::after,
+.prose-content blockquote:not([style*="border: none"]):not([style*="border:none"]):not(.webkit-indent-blockquote)::after,
+.rt-editor blockquote.rt-quote::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 2em;
+  height: 60%;
+  border-bottom: 1px solid rgb(var(--c-on-surface) / 0.45);
+  border-left: 1px solid rgb(var(--c-on-surface) / 0.45);
+  border-bottom-left-radius: 0.5rem;
+}
+
+/* The two marks: opening HIGH, closing LOW, and set BIG - the way a newspaper
+   sets a pull-quote, where the marks are part of the composition rather than two
+   characters of the sentence. At the quotation's own size they read as
+   punctuation that wandered in; at three times it they read as the frame the
+   sentence is being held in, which is the job the frosted panel used to do and
+   did badly.
+   Generated content rather than characters in the stored HTML, and that is a
+   deliberate choice - they are decoration the quotation carries, not words the
+   author typed, so toggling the quotation off in the editor removes the wrapper
+   and the marks go with it, with nothing left to scrub out of the text, nothing
+   for the word count to see, and nothing for a copy-paste of the article to
+   carry into somebody else's document as stray punctuation.
+   They hang off the first and last CHILD rather than off the <blockquote>
+   itself because a blockquote holding a <p> would put its own ::before into an
+   anonymous block of its own: the opening mark alone on a line above the
+   sentence it belongs to. On the child, it sits in front of that child's first
+   word, which is where a quotation mark goes.
+   The size comes with two corrections a big glyph needs. line-height:0 stops
+   the mark's own line box from stretching the line it sits on - a 3em glyph in
+   an ordinary line box would push that line three times as tall as its
+   neighbours. And vertical-align pulls it back down onto the text: aligned on
+   the baseline like ordinary inline content, a 3em opening mark would tower so
+   far above the cap height that it collided with the paragraph above, while the
+   low closing mark would hang as far below into the paragraph below. The two
+   values are not the same because the two glyphs are not: “ lives at the TOP of
+   its em box and „ at the BOTTOM, so the same offset would seat them a whole
+   em apart.
+   Scoped so an indent can never grow a pair. `.rt-quote` is a quotation by
+   declaration. A bare <blockquote> is one by elimination, and the three things
+   excluded are exactly what execCommand('indent') leaves behind and exactly
+   what isIndentBlockquote() reads in js/api.js - the WebKit class and the two
+   spellings of the border it clears. */
+.prose-content blockquote.rt-quote > :first-child::before,
+.prose-content blockquote:not([style*="border: none"]):not([style*="border:none"]):not(.webkit-indent-blockquote) > :first-child::before,
+.rt-editor blockquote.rt-quote > :first-child::before {
+  content: '“';
+  position: absolute;
+  top: -0.34em;
+  left: 0;
+  font-size: 3em;
+  line-height: 1;
+}
+/* The closing mark is the one a big INLINE glyph cannot be: it sits at the end
+   of flowing text, so at 3em it will not always fit on the last line, and a mark
+   that does not fit is a mark alone on a line of its own by accident - the worst
+   of both. So this one is alone on a line ON PURPOSE: a block of its own, right-
+   aligned, tucked up under the last line by a negative margin measured in its
+   own ems. It reads as the composition's full stop - the big mark that closes
+   the frame the big opening mark opened - and because it is a block it can never
+   wrap, never collide with the sentence above it, and never hang outside the
+   column on a phone. */
+.prose-content blockquote.rt-quote > :last-child::after,
+.prose-content blockquote:not([style*="border: none"]):not([style*="border:none"]):not(.webkit-indent-blockquote) > :last-child::after,
+.rt-editor blockquote.rt-quote > :last-child::after {
+  content: '„';
+  position: absolute;
+  bottom: -0.1em;
+  right: 0;
+  font-size: 3em;
+  line-height: 1;
+}
+
+.prose-content blockquote p:last-child,
+.rt-editor blockquote.rt-quote p:last-child { margin-bottom: 0; }
+
+/* Reading progress bar (post detail page) */
+.reading-progress-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  z-index: 100;
+  background: transparent;
+}
+.reading-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(to right, rgb(var(--c-electric-indigo)), rgb(var(--c-secondary-container)));
+  transition: width 0.1s ease;
+}
+
+/* First paragraph of an article reads as a lead-in, matching the design mock */
+.prose-content > p:first-child,
+.prose-content > .rich-text-block:first-child > p:first-child {
+  font-size: 1.35rem;
+  line-height: 1.7;
+  color: rgb(var(--c-on-surface));
+  font-weight: 500;
+}
+
+/* Article typography is set for the desktop measure (~700px). Body copy no
+   longer steps down a notch below sm the way it did at the old 1.2rem base:
+   1rem over a ~350px phone line still clears 35 characters on its own, so
+   the only phone-width adjustment left is a quotation's 2rem of air above
+   and below coming down to 1.5rem with it. */
+@media (max-width: 639px) {
+  .prose-content > p:first-child,
+  .prose-content > .rich-text-block:first-child > p:first-child {
+    font-size: 1.1875rem;
+    line-height: 1.65;
+  }
+  .prose-content blockquote,
+  .rt-editor blockquote.rt-quote { margin: 1.5rem 0; font-size: 1.0625rem; }
+  .prose-content h2, .prose-content h3 { margin-top: 1.5rem; }
+  .rich-text-block ol,
+  .rich-text-block ul { padding-left: 1.25rem; }
+  .rich-text-block .rt-indent,
+  .rt-editor .rt-indent,
+  .prose-content blockquote.webkit-indent-blockquote:not(.rt-quote),
+  .prose-content blockquote[style*="border: none"]:not(.rt-quote),
+  .prose-content blockquote[style*="border:none"]:not(.rt-quote) { margin-left: 1.25rem; }
+}
+
+/* ==========================================================================
+   Account dropdown (the avatar menu in the top nav)
+   Nearly opaque instead of the shared .glass-panel 0.7 alpha: the menu opens
+   over post images and headlines, and at 0.7 that content showed through its
+   labels. Keeps the blur so it still reads as glass, just far less
+   see-through.
+   ========================================================================== */
+#user-dropdown-menu {
+  background: var(--menu-surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--menu-border);
+  box-shadow: var(--menu-shadow);
+}
+#user-dropdown-menu:not(.hidden) {
+  animation: dropdown-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The mobile search overlay overlaps page content, so it gets the same
+   near-opaque treatment as the dropdown above. */
+#search-overlay {
+  background: var(--menu-surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--menu-shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #user-dropdown-menu:not(.hidden) { animation: none; }
+}
+
+/* ==========================================================================
+   Auth modal (login / register / forgot password)
+   Same "Electric Silicon" language as the hero section: a frosted card over a
+   blurred backdrop, indigo blur blobs behind it, gradient CTA. The card itself
+   is nearly opaque so form labels stay readable over whatever page is behind.
+   ========================================================================== */
+#auth-modal {
+  /* The scrim was `bg-[#131b2e]/50` in the markup - the light theme's ink at
+     50%, which over a near-black page is a scrim you cannot see: the modal
+     stopped reading as being ON TOP of anything. --c-scrim is that same colour
+     in the light theme and deepens for the dark one. An ID selector, so it wins
+     over the utility still on the element without !important, and the utility is
+     left in place: tailwind.css is COMPILED from the markup, and this project
+     cannot currently run that build (tailwindcss is not installed), so removing
+     a class here would not shrink the CSS and putting it back would need one. */
+  background: var(--c-scrim);
+  animation: auth-backdrop-in 0.2s ease;
+}
+/* Same story for the two admin dialogs, which used `bg-black/40`. */
+#add-user-modal,
+#reset-password-modal {
+  background: var(--c-scrim);
+}
+
+/* The profile hero avatar's ring, `border-4 border-white` in the markup: a solid
+   white ring is what lifts the portrait off the light glass card, and the same
+   ring on the dark theme is a bright halo around every avatar - the brightest
+   thing on the page. surface-container-lowest IS white in the light theme, so
+   this changes nothing there, and becomes the deepest surface step on the dark
+   one: the ring still separates the portrait, now by sitting darker than the card
+   instead of lighter. An ID, so it beats the utility without !important - see the
+   note on #auth-modal above for why the class stays in the markup. */
+#profile-avatar {
+  border-color: rgb(var(--c-surface-container-lowest));
+}
+#auth-modal .auth-card {
+  position: relative;
+  background: var(--menu-surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--modal-shadow);
+  animation: auth-card-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes auth-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes auth-card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Segmented tab switcher: a pill track with the active tab as a filled chip. */
+.auth-tab {
+  flex: 1 1 0;
+  min-height: 40px;
+  padding: 0.625rem 0.75rem;
+  border-radius: 9999px;
+  font-family: var(--font-vi-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgb(var(--c-on-surface-variant));
+  background: transparent;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.auth-tab:hover { color: rgb(var(--c-primary)); }
+.auth-tab[aria-selected='true'] {
+  color: rgb(var(--c-on-primary));
+  background: var(--brand-gradient);
+  box-shadow: var(--shadow-cta);
+}
+
+/* Inputs: icon on the left, indigo focus ring, no per-input class soup.
+   Scoped under #auth-modal on purpose - the Tailwind forms plugin styles
+   `[type='email']` etc. at the same specificity as a bare `.auth-input`, and
+   the CDN injects its sheet after this file, so a plain class selector loses
+   the padding tie and the icon ends up sitting on top of the placeholder. */
+.auth-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  /* Input height is pinned here so the icon can be centred against it: the
+     explicit line-height below plus the vertical padding and borders. Without
+     a known height the icon has to guess an offset from the bottom edge and
+     drifts off-centre whenever the font metrics change. */
+  --auth-input-line: 1.5rem;
+  --auth-input-pad-y: 0.75rem;
+  --auth-input-height: calc(var(--auth-input-line) + (var(--auth-input-pad-y) * 2) + 2px);
+}
+/* Anchored to the input's box (last child, so bottom: 0) and stretched to its
+   full height, then flex-centred - stays centred at any input font size. */
+.auth-field > .material-symbols-outlined {
+  position: absolute;
+  left: 0.875rem;
+  bottom: 0;
+  height: var(--auth-input-height);
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  line-height: 1;
+  color: rgb(var(--c-outline));
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+#auth-modal .auth-input {
+  width: 100%;
+  padding: var(--auth-input-pad-y) 1rem var(--auth-input-pad-y) 2.75rem;
+  line-height: var(--auth-input-line);
+  background: rgb(var(--c-surface-container-low));
+  border: 1px solid rgb(var(--c-outline-variant));
+  border-radius: 0.75rem;
+  font-family: var(--font-vi-sans);
+  font-size: 15px;
+  color: rgb(var(--c-on-surface));
+  outline: none;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+#auth-modal .auth-input::placeholder { color: rgb(var(--c-outline)); opacity: 1; }
+#auth-modal .auth-input:focus {
+  background: rgb(var(--c-surface-container-lowest));
+  border-color: rgb(var(--c-electric-indigo));
+  box-shadow: var(--shadow-focus);
+}
+.auth-field:focus-within > .material-symbols-outlined { color: rgb(var(--c-electric-indigo)); }
+
+/* The OTP field is centred, so it drops the icon and the icon's left inset -
+   otherwise the digits sit visibly off-centre. */
+.auth-field--centered > .material-symbols-outlined { display: none; }
+#auth-modal .auth-field--centered > .auth-input { padding-left: 1rem; }
+
+/* Error banner. It toggles via .hidden, so the layout mode lives here rather
+   than as a `flex` utility class that would fight `hidden` for precedence. */
+#auth-error:not(.hidden) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+/* Primary CTA reuses the homepage hero button gradient. */
+.auth-submit {
+  width: 100%;
+  padding: 0.8125rem 1rem;
+  border-radius: 9999px;
+  background: var(--brand-gradient);
+  color: rgb(var(--c-on-primary));
+  font-family: var(--font-vi-sans);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-cta-lg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.auth-submit:hover { transform: translateY(-1px); box-shadow: var(--shadow-cta-hover); }
+.auth-submit:active { transform: translateY(0); }
+.auth-submit:disabled { opacity: 0.6; transform: none; box-shadow: none; cursor: not-allowed; }
+
+/* The modal's plain-text buttons ("Quen mat khau?", "Gui lai ma") are disabled
+   while their request is in flight or during the resend cooldown. Written by
+   hand rather than as Tailwind's disabled:opacity-60, which is not in the
+   compiled tailwind.css and would need a rebuild to appear. */
+#auth-modal button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  #auth-modal, #auth-modal .auth-card { animation: none; }
+  .auth-submit:hover { transform: none; }
+}
+
+/* ==========================================================================
+   Like / dislike buttons (post detail + each comment)
+   One class for both scales: the post-level pair sits in the share bar, the
+   comment-level pair inside a comment. NO FRAME AND NO PILL, in any state: at
+   rest, on hover and once voted, a vote is only its icon and its count on the
+   page. What a vote changes is the GLYPH - outline to filled - and its colour;
+   nothing is ever painted behind it, because every wash tried here read on
+   screen as the frame the reader asked to have removed (2026-09-11, twice).
+   The counts sit beside the icon so the number never drifts away from it on a
+   narrow screen.
+   ========================================================================== */
+.reaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  background: transparent;
+  color: rgb(var(--c-on-surface-variant));
+  font-family: var(--font-vi-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+/* Hover is a colour, not a fill: a wash that appears before any vote would be a
+   second "pressed" look, and the whole point of the restyle is that the filled
+   glyph IS the vote. The colour shift is enough to say "clickable" on a control
+   that has no rim left to light up. */
+.reaction-btn:hover { color: rgb(var(--c-primary)); }
+.reaction-btn:active { transform: scale(0.96); }
+.reaction-btn:focus-visible {
+  outline: 2px solid rgb(var(--c-electric-indigo));
+  outline-offset: 2px;
+}
+/* aria-pressed is the single source of truth for the active state, so the
+   styling cannot drift from what a screen reader announces. The vote is the
+   filled glyph plus its colour - and deliberately nothing else. */
+.reaction-btn[aria-pressed='true'] {
+  color: rgb(var(--c-primary));
+}
+.reaction-btn[aria-pressed='true'] .material-symbols-outlined {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+/* The dislike side turns red when active - same shape, opposite meaning. */
+.reaction-btn--down[aria-pressed='true'] {
+  color: rgb(var(--c-error));
+}
+.reaction-btn--down:hover { color: rgb(var(--c-error)); }
+/* A guest can still see the totals, but the pill must not look clickable. */
+.reaction-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.reaction-btn[disabled]:hover {
+  color: rgb(var(--c-on-surface-variant));
+}
+.reaction-count { font-variant-numeric: tabular-nums; min-width: 1ch; text-align: left; }
+
+/* Smaller pill for the pair inside a comment, where it sits next to "Trả lời". */
+.reaction-btn--sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 12px;
+  gap: 0.25rem;
+}
+.reaction-btn--sm .material-symbols-outlined { font-size: 16px; }
+
+/* Admin-only delete on a comment: quiet until hovered, so moderation controls
+   do not compete with the comment itself. */
+.comment-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgb(var(--c-outline));
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+.comment-delete-btn:hover { color: rgb(var(--c-error)); }
+.comment-delete-btn .material-symbols-outlined { font-size: 16px; }
+
+/* A signed-in reader's report on a comment. Same voice as the admin delete right
+   above - quiet until hovered, because a moderation control must not compete with
+   the comment it is about - but red on hover and once reported: a report is an
+   accusation, and the button should say so after it has been made. The reported
+   state rides a data attribute the way the reaction pills ride aria-pressed. */
+.comment-report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgb(var(--c-outline));
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+.comment-report-btn:hover { color: rgb(var(--c-error)); }
+.comment-report-btn .material-symbols-outlined { font-size: 16px; }
+.comment-report-btn[data-reported='1'] { color: rgb(var(--c-error) / 0.8); }
+
+/* Hide / unhide, admin-only. Deliberately NOT red: hiding is reversible and is
+   not an error, so it borrows the brand accent on hover instead. */
+.comment-hide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgb(var(--c-outline));
+  font-family: var(--font-vi-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+.comment-hide-btn:hover { color: rgb(var(--c-primary)); }
+.comment-hide-btn .material-symbols-outlined { font-size: 16px; }
+
+/* "Your comment was hidden by a moderator." role="status" means a screen reader
+   announces it, so it has to be equally readable by eye: a tertiary-container
+   panel, not red text - this is not the author's error, and red would read as one. */
+.comment-hidden-note {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgb(var(--c-tertiary-container) / 0.35);
+  color: rgb(var(--c-on-tertiary-container));
+  font-family: var(--font-vi-sans);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.comment-hidden-note .material-symbols-outlined { font-size: 18px; }
+
+/* The admin's per-comment report total on the byline row. A count, not a control:
+   muted ink, and the error accent only as a tint so it draws the eye without
+   shouting over the name beside it. */
+.comment-report-count {
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(var(--c-error) / 0.12);
+  color: rgb(var(--c-error));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reaction-btn { transition: none; }
+  .reaction-btn:active { transform: none; }
+}
+
+/* ==========================================================================
+   Light / dark switch
+   Both marks are in the markup and .dark picks one - a swap in CSS cannot lag
+   behind the theme the way a JS-rewritten glyph can. */
+.theme-glyph { flex-shrink: 0; }
+.theme-glyph--dark { display: none; }
+.dark .theme-glyph--dark { display: inline-block; }
+.dark .theme-glyph--light { display: none; }
+
+/* The switch itself. Both halves are tokens, and the KNOB changes colour with
+   the state rather than staying white: on the dark theme `electric-indigo` is
+   the pale end of the ramp, so a white knob on a lit track was two near-whites
+   touching. `on-primary` is by definition the ink that sits on a primary fill,
+   which is exactly what the lit track is; `outline` is the unlit counterpart.
+   Driven by :checked on profile.html's notification toggle - a real
+   checkbox input, since that switch carries an actual form value. */
+.ui-switch {
+  position: relative;
+  flex-shrink: 0;
+  display: block;
+  width: 3rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background-color: rgb(var(--c-surface-container-highest));
+  border: 1px solid rgb(var(--c-outline-variant));
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.ui-switch::after {
+  content: '';
+  position: absolute;
+  left: 0.25rem;
+  top: 50%;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: -0.625rem;
+  border-radius: 9999px;
+  background-color: rgb(var(--c-outline));
+  box-shadow: var(--shadow-pill);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+input:checked ~ .ui-switch {
+  background-color: rgb(var(--c-electric-indigo));
+  border-color: rgb(var(--c-electric-indigo));
+}
+input:checked ~ .ui-switch::after {
+  /* The travel is measured against the PADDING box, which is what an absolutely
+     positioned child is offset from: 48px - 2x1px border - 2x4px inset - 20px
+     knob = 18px. Using 20px (the outer arithmetic) left the knob 2px off centre
+     at the lit end. */
+  transform: translateX(1.125rem);
+  background-color: rgb(var(--c-on-primary));
+}
+input:focus-visible ~ .ui-switch {
+  box-shadow: var(--shadow-focus);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-switch, .ui-switch::after { transition: none; }
+}
+
+/* Elevation utilities. See the note in tailwind.config.js's boxShadow block: the
+   nav, the footer and the Google button used to spell these out as arbitrary
+   values, which is why they were the only three surfaces still carrying the light
+   theme's indigo bloom on a dark page. Tailwind's own `shadow-*` utilities set
+   --tw-shadow so a ring can compose with them; none of these three surfaces uses
+   a ring, so the plain declaration is what they need.
+   `.ambient-shadow` further up is the same declaration under the project's older
+   name; it is left alone because js/profile.js's cards use it, and these carry the
+   Tailwind spelling the markup asks for. */
+.shadow-ambient { box-shadow: var(--shadow-ambient); }
+.shadow-ambient-t { box-shadow: var(--shadow-ambient-t); }
+.hover\:shadow-google:hover { box-shadow: var(--shadow-google); }
+
+/* The search fields' recessed well. This was `bg-black/5`, which on the dark
+   theme is black at 5% over an already near-black page - the field simply
+   disappeared. --c-field carries the same 5% ink in the light theme and flips to
+   a pale film in the dark one.
+   Typed as `input.field-well`, not `.field-well`: the Tailwind forms plugin's
+   base layer sets `background-color: #fff` on text inputs, and tailwind.css
+   loads AFTER this file. Its selector is `input:where([type=text])`, which
+   :where() flattens to specificity 0,0,1 - so naming the element as well keeps
+   the win explicit rather than resting on that detail. */
+input.field-well {
+  background-color: var(--c-field);
+}
+
+/* ---- The terms-of-service page (public/terms.html) ----------------------------
+   A legal document rather than an article, so it gets its own rhythm instead of
+   borrowing .prose-content: that one is tuned for long-form reading (1.125rem
+   at 1.7, a larger opening paragraph, pull-quotes with hanging quotation marks),
+   and ten numbered clauses want to sit denser and quieter than a blog post.
+   Every colour here is a token, so the dark theme needs no rules of its own -
+   the `.dark` block at the top of this file re-points them all.
+   Body copy is Medium 500 for the reason the two banners above give: at 15px on
+   a backlit screen Inter 400 reads thin, and 500 is a real shipped
+   face (css/fonts.css carries n500 for all three subsets), not a synthesis.
+   list-style and padding-left are restated because Tailwind's Preflight resets
+   both to none/0 on every <ul>, and tailwind.css loads after this file. */
+.terms-body {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+.terms-body section + section {
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid rgb(var(--c-outline-variant) / 0.5);
+}
+.terms-body h2 {
+  margin-bottom: 0.625rem;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: rgb(var(--c-on-background));
+}
+.terms-body p,
+.terms-body li {
+  margin-bottom: 0.625rem;
+  font-weight: 500;
+  color: rgb(var(--c-on-surface-variant));
+}
+.terms-body p:last-child,
+.terms-body li:last-child {
+  margin-bottom: 0;
+}
+.terms-body ul {
+  list-style: disc;
+  padding-left: 1.75rem;
+  margin: 0 0 0.625rem;
+}
+.terms-body li::marker {
+  color: rgb(var(--c-electric-indigo));
+}
+.terms-body strong {
+  font-weight: 700;
+  color: rgb(var(--c-on-surface));
+}
+.terms-body a {
+  color: rgb(var(--c-electric-indigo));
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+  overflow-wrap: anywhere;
+}
+.terms-body a:hover {
+  color: rgb(var(--c-primary));
+}
+/* Clause 10's contact block is the one link in the document that reads as a
+   line of the clause rather than as a control: the address alone - no mail
+   icon, and no underline at all. The stroke the rule above draws under every
+   other clause link is lifted off this element alone by the first selector
+   below, and the second cancels the hover stroke .footer-link gives its label
+   span, so even the hover reads through colour only. Links that ARE prose
+   ("thông tin tác giả" in the same clause) keep their underline.
+   Scoped by class, not by a marker added to the markup: CONTACT_HTML in
+   server/terms.js is documented as byte-identical to the paragraph
+   public/terms.html ships, and a CSS-only rule keeps that true without two
+   files to edit in step. */
+.terms-body a.footer-link,
+.terms-body a.footer-link:hover .footer-link-label {
+  text-decoration: none;
+}
+/* The closing note under the last clause: a step smaller and separated by the
+   same hairline the clauses use, because it qualifies the whole document rather
+   than being part of it. */
+.terms-body .terms-note {
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid rgb(var(--c-outline-variant) / 0.5);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+
+/* ---- A hover underline stays off an icon ligature ---------------------------
+   Several controls are an icon ligature plus a label: the footer row, the
+   "Trang chủ" back link on /terms.html, "Xem tất cả" on the homepage, the
+   password generator in the admin panel. Underlining the whole element draws a
+   second stroke under the icon at the ICON font's metrics, a couple of pixels
+   off the label's own line - two misaligned underlines on one hover. The stroke
+   therefore belongs to the label span only (.footer-link-label in the footer,
+   .icon-link-label elsewhere), while any colour change still covers the whole
+   control, so hovering the icon reads as the same hover. */
+.footer-link:hover .footer-link-label,
+.icon-link:hover .icon-link-label {
+  text-decoration-line: underline;
+}
+
+/* ---- The terms editor's fields (public/terms.html, admin only) --------------
+   The editor's inputs and textareas need a field surface of their own: the two
+   the rest of the site uses are page-local (.glass-field in admin.html's
+   <style>, .input-glass in write.html's), so neither reaches this page. This is
+   the same surface as .glass-field - same token border, well and focus ring -
+   copied rather than shared because lifting .glass-field into common.css would
+   restyle admin.html's fields through a file admin.html does not load last.
+   Tokens only, so the dark theme needs nothing of its own. */
+.terms-field {
+  border: 1px solid rgb(var(--c-outline-variant) / 0.55);
+  /* background-COLOR, not the `background` shorthand - the same longhand
+     .glass-field uses, for the same reason (a shorthand would reset
+     background-image on any control a plugin draws a chevron into). */
+  background-color: var(--c-field);
+  box-shadow: inset 0 1px 2px rgb(var(--c-on-surface) / 0.06);
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.terms-field:focus {
+  outline: none;
+  background-color: var(--glass-wash-1);
+  border-color: rgb(var(--c-electric-indigo));
+  box-shadow: var(--shadow-focus);
+}
+/* The save row's separator. Spacing lives here rather than in pt-* utilities
+   because the compiled tailwind.css carries no pt-3/pt-4 at all, and a missing
+   utility is a silent no-style rather than an error. */
+.terms-editor-foot {
+  border-top: 1px solid rgb(var(--c-outline-variant) / 0.6);
+  padding-top: 1rem;
+}
+
+/* ==========================================================================
+   Maintenance notice - one card, two homes (2026-09-11, retinted 2026-09-17)
+   The same card is (a) the whole of public/maintenance.html, which the server
+   answers with when data/maintenance-on exists or when a request dies in a 5xx,
+   and (b) a panel api.js puts over a page whose own requests start failing -
+   a reader whose server vanished mid-article gets the same words either way.
+   It is built from the site's own tokens and nothing else, so the dark theme
+   restyles it with no rule of its own, and the flat backdrop it sits on is the
+   one the body already paints. The wrench is an inline <svg> in currentColor
+   rather than an icon-font glyph: the subsetted Material Symbols face carries
+   no wrench, and a glyph it does not carry renders as NOTHING.
+   Every real page now carries .editorial-page (see editorial.css), which
+   retints these same --c-, --glass- and --shadow- tokens flat instead of the
+   old indigo glass theme - so home (b), injected into an editorial page,
+   already read correctly. Home (a) did not: the standalone HTML never opted
+   into .editorial-page, so it kept the old glass card (a --glass-wash-1 fill,
+   which the alias flattens to fully transparent, plus a stray backdrop blur)
+   and the old bg-clip-text wordmark. maintenance.html now sets the class and
+   loads editorial.css too, and this rule reads --c-glass-surface (the same
+   opaque-fill token .glass-panel/.glass-card use) rather than --glass-wash-1,
+   so both homes render the one flat card either way. */
+.maintenance-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+/* The panel home: over everything, including the lightbox (z-index 100). */
+.maintenance-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--c-scrim);
+  backdrop-filter: blur(4px);
+}
+/* The panel home DOES still need a visible boundary - it floats over a real
+   page's own content behind the scrim, so it has to read as its own object
+   the way any dialog does. Given the card look here instead of on the base
+   rule below, since the standalone page (home (a), nothing behind it to
+   separate from) now asks to sit flat on the page background with no frame
+   at all - see that rule's own comment. */
+.maintenance-scrim .maintenance-card {
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  background: var(--c-glass-surface);
+  border: 1px solid var(--c-glass-border);
+  border-radius: 0.375rem;
+  box-shadow: var(--shadow-lift);
+}
+.maintenance-card {
+  width: 100%;
+  max-width: 34rem;
+  padding: 1rem 1.5rem;
+  text-align: center;
+}
+.maintenance-icon {
+  width: 4.75rem;
+  height: 4.75rem;
+  margin: 0 auto 1.75rem;
+  border-radius: 0.625rem;
+  background: var(--brand-gradient);
+  color: rgb(var(--c-on-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-cta);
+  animation: maintenance-float 3.5s ease-in-out infinite;
+}
+.maintenance-icon svg {
+  width: 2.25rem;
+  height: 2.25rem;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@keyframes maintenance-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.maintenance-title {
+  /* Newsreader, like every other headline on an .editorial-page (.ed-hero-title,
+     .ed-section-title, ...) - the family itself is loaded by editorial.css, not
+     this file, so a page that skips that stylesheet (none do any more, but see
+     its own header comment) falls back to the serif stack below rather than
+     silently inheriting the body sans. */
+  font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+  font-size: 1.625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: rgb(var(--c-on-surface));
+  margin-bottom: 0.875rem;
+}
+.maintenance-text {
+  color: rgb(var(--c-on-surface-variant));
+  font-size: 0.96875rem;
+  line-height: 1.7;
+  margin-bottom: 0.5rem;
+}
+.maintenance-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.375rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.25rem;
+  background: rgb(var(--c-electric-indigo) / 0.12);
+  border: 1px solid rgb(var(--c-electric-indigo) / 0.3);
+  color: rgb(var(--c-primary));
+  font-size: 0.84375rem;
+  font-weight: 600;
+}
+.maintenance-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: rgb(var(--c-electric-indigo));
+  animation: maintenance-pulse 1.6s ease-in-out infinite;
+}
+@keyframes maintenance-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
+}
+.maintenance-divider {
+  height: 1px;
+  background: rgb(var(--c-outline-variant) / 0.5);
+  margin: 2rem 0 1.5rem;
+}
+.maintenance-thanks {
+  font-size: 0.84375rem;
+  color: rgb(var(--c-on-surface-variant));
+}
+/* The panel's one extra control: the page underneath may still be fine, so the
+   reader gets to ask again instead of staring at a verdict. Same voice as the
+   auth form's submit - the site's one gradient button. */
+.maintenance-retry {
+  margin-top: 1.5rem;
+  padding: 0.75rem 2rem;
+  border-radius: 0.375rem;
+  background: var(--brand-gradient);
+  color: rgb(var(--c-on-primary));
+  font-family: var(--font-vi-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-cta);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.maintenance-retry:hover {
+  box-shadow: var(--shadow-cta-hover);
+  transform: translateY(-0.125rem);
+}
+.maintenance-foot {
+  font-size: 0.78125rem;
+  color: rgb(var(--c-on-surface-variant) / 0.8);
+}
+@media (max-width: 480px) {
+  .maintenance-card { padding: 2.25rem 1.5rem; }
+  .maintenance-title { font-size: 1.3125rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .maintenance-icon { animation: none; }
+  .maintenance-dot { animation: none; }
+  .maintenance-retry:hover { transform: none; }
+}
+
+/* ==========================================================================
+   Toast - the site's one transient answer (2026-09-11)
+   A report used to answer with a native alert(): the browser's own grey box,
+   the one element on the page no theme token reaches. This is the replacement,
+   built from the same glass as everything else and carrying the same left bar
+   the notification inbox uses to say "this row matters" - primary for a thank
+   you, outline for a withdrawal, error for a refusal - so a reader who knows
+   the inbox reads the toast with the same eye.
+   Fixed at the bottom centre: the comment it answers is usually on screen
+   above it, and a corner toast would sit over the reading column's margin on
+   a phone. The stack is pointer-events:none so only the cards themselves are
+   clickable, and each card dismisses on a click as well as on its timer.
+   ========================================================================== */
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1.5rem;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: calc(100% - 2rem);
+  max-width: 26rem;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--glass-wash-3);
+  border: 1px solid var(--c-glass-border);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lift);
+  color: rgb(var(--c-on-surface));
+  font-family: var(--font-vi-sans);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  text-align: left;
+  cursor: pointer;
+  animation: toast-in 0.25s ease;
+}
+.toast .material-symbols-outlined {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.toast--ok { box-shadow: var(--shadow-lift), inset 3px 0 0 rgb(var(--c-primary)); }
+.toast--ok .material-symbols-outlined { color: rgb(var(--c-primary)); }
+.toast--info { box-shadow: var(--shadow-lift), inset 3px 0 0 rgb(var(--c-outline)); }
+.toast--info .material-symbols-outlined { color: rgb(var(--c-on-surface-variant)); }
+.toast--error { box-shadow: var(--shadow-lift), inset 3px 0 0 rgb(var(--c-error)); }
+.toast--error .material-symbols-outlined { color: rgb(var(--c-error)); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.toast--out { animation: toast-out 0.25s ease forwards; }
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(0.5rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast, .toast--out { animation: none; }
+}
